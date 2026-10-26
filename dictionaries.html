@@ -1,0 +1,943 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Python Dictionaries</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/runmode/runmode.min.js"></script>
+<style>
+:root{
+  --ink:#111;--muted:#666;--line:#d4d4d4;--code-bg:#f6f7f9;
+  --accent:#1a5fd0;--accent-soft:#e6efff;--hl:#fff2a8;
+  --ok:#1e7e34;--ok-soft:#dff3e4;--bad:#c62828;--bad-soft:#fde0e0;--orange:#ffd9a8;
+  --fs:clamp(18px,1.15vw + 7px,30px);--cfs:clamp(15px,0.95vw + 5px,26px);
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --navh:56px;
+}
+*{box-sizing:border-box;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html,body{margin:0;height:100%;background:#fff;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden}
+.slide{position:fixed;top:0;left:0;right:0;bottom:calc(var(--navh) + env(safe-area-inset-bottom,0px));overflow-y:auto;overflow-x:hidden;padding:32px 48px;display:none;flex-direction:column}
+.slide.active{display:flex}
+.inner{width:100%;max-width:min(1500px,100%);margin:0 auto}
+#s1 .inner{margin:auto}
+h1{font-size:clamp(28px,2.3vw + 10px,56px);margin:0 0 20px;line-height:1.15}
+p{font-size:var(--fs);line-height:1.45;margin:0 0 16px;max-width:64ch}
+code,.ic{font-family:var(--mono)}
+p code,li code,.note code,.hint code,.legend code{background:var(--code-bg);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:.88em}
+.code{font-family:var(--mono);font-size:var(--cfs);line-height:1.6;background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:14px 18px;white-space:pre;overflow-x:auto;margin:0 0 16px}
+.code.big{font-size:calc(var(--cfs)*1.15)}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px;align-items:start}
+.btn{font:inherit;font-size:18px;padding:8px 16px;border:1.5px solid var(--ink);background:#fff;color:var(--ink);border-radius:6px;cursor:pointer}
+.btn:hover{background:#f0f0f0}
+.btn.primary{background:var(--ink);color:#fff}
+.btn.primary:hover{background:#333}
+.btn:disabled{opacity:.35;cursor:default}
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:4px 0 12px}
+.label{font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:0 0 6px}
+.out{font-family:var(--mono);font-size:var(--cfs);background:#fff;border:1.5px solid var(--ink);border-radius:8px;padding:12px 16px;min-height:3.2em;white-space:pre-wrap;word-break:break-word;margin:0 0 12px}
+.err{color:var(--bad)}
+.muted{color:var(--muted)}
+.note{font-size:var(--fs);line-height:1.45;margin:6px 0 0;max-width:62ch}
+.chip{display:inline-block;font-family:var(--mono);font-size:var(--cfs);background:var(--accent-soft);border:1px solid #b9cdf5;border-radius:6px;padding:2px 10px;margin:3px 6px 3px 0}
+.txtin{font-family:var(--mono);font-size:max(16px,var(--cfs));padding:6px 10px;border:1.5px solid var(--ink);border-radius:6px;width:120px}
+@keyframes pop{from{transform:scale(.85);opacity:0}to{transform:none;opacity:1}}
+.good{color:var(--ok);font-weight:700}
+.badt{color:var(--bad);font-weight:700}
+.blue-c{background:var(--accent-soft);border-radius:4px;padding:0 3px}
+.orange-c{background:var(--orange);border-radius:4px;padding:0 3px}
+
+/* nav */
+.nav{position:fixed;left:0;right:0;bottom:0;height:calc(var(--navh) + env(safe-area-inset-bottom,0px));padding:0 18px env(safe-area-inset-bottom,0px);border-top:1px solid #e5e5e5;display:flex;align-items:center;justify-content:space-between;background:#fff;z-index:10}
+.nav .right{display:flex;gap:10px;align-items:center}
+#counter{font-size:16px;color:var(--muted);min-width:64px;text-align:center}
+#pystat{font-size:14px}
+.bar{position:fixed;left:0;bottom:calc(var(--navh) + env(safe-area-inset-bottom,0px));height:3px;background:var(--ink);transition:width .3s;z-index:10}
+
+/* code editor (mistakes + practice) */
+.runner .CodeMirror{height:auto;font-family:var(--mono);font-size:var(--cfs);line-height:1.55;border:1px solid var(--line);border-radius:8px;background:var(--code-bg)}
+.runner .CodeMirror-gutters{background:var(--code-bg);border-right:1px solid var(--line)}
+.runner .CodeMirror-scroll{min-height:3em}
+.CodeMirror textarea{font-size:16px}
+
+/* stepper */
+.stepper{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:32px;align-items:start}
+.stepcode{padding:10px 0}
+.ln{display:flex;padding:0 14px 0 4px;transition:background .2s}
+.ln .num{width:2em;color:#aaa;text-align:right;padding-right:6px;flex:none;user-select:none}
+.ln .arr{width:1.4em;flex:none;color:var(--accent);text-align:center}
+.ln .txt{white-space:pre}
+.ln.cur{background:var(--hl)}
+.ln.cur .arr::before{content:"\25B6"}
+.cnt{font-size:16px}
+.mem{border:2px dashed var(--line);border-radius:10px;padding:10px 14px;margin-bottom:12px;min-height:3.2em}
+.mem .row{display:flex;align-items:flex-start;gap:12px;margin:6px 0;flex-wrap:wrap}
+.mem .vn{font-family:var(--mono);font-weight:700;font-size:var(--cfs);min-width:4.2em;padding-top:5px}
+.mem .lst .box{padding:5px 9px;min-width:0;font-size:calc(var(--cfs)*.9)}
+.mem .empty{color:#aaa;font-size:16px}
+
+/* dictionary picture */
+.dict{display:inline-block;border:2.5px solid var(--ink);border-radius:12px;padding:8px 10px 10px;background:#fff;min-width:min(300px,100%);max-width:100%;vertical-align:top}
+.dname{font-family:var(--mono);font-weight:700;font-size:var(--cfs);margin:0 0 6px 2px}
+.dhead,.drow{display:grid;grid-template-columns:minmax(0,1fr) 26px minmax(0,1fr);align-items:center}
+.dhead{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:0 6px 2px}
+.drow{border-radius:8px;padding:3px 6px;margin-top:4px;transition:background .25s}
+.dk,.dv{font-family:var(--mono);font-size:var(--cfs);border-radius:6px;padding:3px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dk{background:var(--accent-soft);border:1px solid #b9cdf5}
+.dv{background:#fff;border:1.5px solid var(--line)}
+.darr{text-align:center;color:var(--muted);font-size:18px}
+.drow.hi{background:var(--hl)}
+.drow.new{animation:pop .35s;background:var(--ok-soft)}
+.drow.changed .dv{background:var(--hl);outline:2px solid #e0c200}
+.drow.del{background:var(--bad-soft)}
+.drow.del .dk,.drow.del .dv{text-decoration:line-through;opacity:.6}
+.dk.lit,.dv.lit{outline:3px solid #e0c200;background:var(--hl)}
+.dv.wrong{outline:3px solid var(--bad);background:var(--bad-soft)}
+.dempty{color:#aaa;font-size:16px;padding:4px 6px}
+
+/* list picture */
+.lst{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.cell{display:flex;flex-direction:column;align-items:center}
+.cell .idx{font-family:var(--mono);font-size:15px;color:var(--muted);min-height:1.6em}
+.cell .box{font-family:var(--mono);font-size:var(--cfs);border:2px solid var(--ink);border-radius:6px;padding:7px 13px;min-width:56px;text-align:center;background:#fff;transition:background .25s}
+.cell.hi .box{background:var(--hl)}
+.cell.hi .idx{color:var(--ink);font-weight:700}
+.cell.dim{opacity:.3}
+
+/* title */
+#s1 .inner{text-align:center}
+#s1 h1{font-size:clamp(44px,6vw,90px);margin-bottom:30px}
+#s1 p{max-width:none}
+.t-demo{display:flex;align-items:center;gap:20px;flex-wrap:wrap;justify-content:center;text-align:left}
+.t-expr,.t-res{font-family:var(--mono);font-size:calc(var(--cfs)*1.15);border-radius:8px;padding:10px 16px;text-align:center}
+.t-expr{background:var(--code-bg);border:1px solid var(--line);min-width:9.5em}
+.t-res{background:var(--accent);color:#fff;min-width:6em}
+.t-arrow{font-size:28px;color:var(--muted)}
+
+/* intro slides: bigger pictures */
+.intro .dict,.intro .lst{font-size:1.2em}
+.intro .dk,.intro .dv,.intro .cell .box{font-size:calc(var(--cfs)*1.2)}
+.intro .dict{min-width:min(380px,100%)}
+/* writing slide legend */
+.k{background:var(--accent-soft);border-radius:4px;padding:0 2px}
+.v{background:var(--orange);border-radius:4px;padding:0 2px}
+.s{background:var(--hl);border-radius:4px;padding:0 3px;font-weight:700}
+.legend{display:grid;grid-template-columns:auto 1fr;gap:10px 16px;align-items:baseline;margin:0 0 8px;font-size:var(--fs);line-height:1.4}
+.legend .sw{font-family:var(--mono);font-size:var(--cfs);text-align:center;padding:1px 8px;border-radius:4px}
+
+/* tabs (mistakes + practice) */
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.tab{font:inherit;font-size:17px;padding:7px 14px;border:1.5px solid var(--ink);background:#fff;border-radius:6px;cursor:pointer}
+.tab.on{background:var(--ink);color:#fff}
+.tab.mono{font-family:var(--mono)}
+.results{list-style:none;padding:0;margin:8px 0 0;font-family:var(--mono);font-size:var(--cfs)}
+.results li{padding:4px 0;word-break:break-word}
+.hint{font-size:var(--fs);border-left:5px solid #e0c200;background:#fffbe6;padding:10px 16px;margin:10px 0;display:none;max-width:62ch}
+
+/* tablet and phone */
+@media (max-width:900px){
+  .two,.stepper{grid-template-columns:minmax(0,1fr);gap:18px}
+  .slide{padding:22px 16px 28px}
+}
+@media (max-width:600px){
+  :root{--fs:17px;--cfs:14px;--navh:60px}
+  h1{font-size:28px;margin-bottom:14px}
+  #s1 h1{font-size:48px}
+  .code{padding:10px 12px}
+  .btn{font-size:17px;padding:9px 14px}
+  #pystat{display:none}
+  .nav{padding-left:12px;padding-right:12px}
+  .nav .right{width:100%;justify-content:space-between}
+  .t-arrow{transform:rotate(90deg)}
+  .t-demo{flex-direction:column;gap:10px}
+  .legend{gap:8px 12px}
+  .code,.ln .txt{white-space:pre-wrap;word-break:break-word}
+  .ln .txt{min-width:0}
+}
+
+/* parallel lists picture */
+.par-wrap{overflow-x:auto;max-width:100%}
+.par{display:inline-grid;gap:6px 10px;align-items:center}
+.par .pl{font-family:var(--mono);font-weight:700;font-size:var(--cfs);text-align:center}
+.par .pi{font-family:var(--mono);font-size:15px;color:var(--muted);text-align:center;padding:0 6px}
+.par .pb{font-family:var(--mono);font-size:var(--cfs);border:2px solid var(--ink);border-radius:6px;padding:6px 12px;text-align:center;background:#fff;white-space:nowrap}
+.par .col-hi{background:var(--hl)}
+.par .pi.col-hi{background:none;color:var(--ink);font-weight:700}
+
+/* keys and values */
+.defs{display:grid;grid-template-columns:auto 1fr;gap:12px 18px;align-items:center;margin:4px 0 30px;font-size:var(--fs)}
+.defs > div{display:contents}
+.defs .k,.defs .v{font-family:var(--mono);font-weight:700;padding:2px 12px;border-radius:6px;text-align:center}
+table.book{border-collapse:collapse;font-size:var(--fs);min-width:min(320px,100%)}
+table.book th{text-align:left;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:500;padding:0 14px 6px 0}
+table.book td{padding:6px 14px 6px 0;border-top:1px solid var(--line)}
+table.book td:first-child{font-weight:700}
+table.book td:last-child{font-style:italic;color:#444}
+
+/* spacing */
+.slide{padding-top:40px}
+h1{margin-bottom:28px}
+.slide p{line-height:1.5;margin-bottom:24px;max-width:72ch;text-wrap:pretty}
+.code{margin-bottom:28px}
+.out{margin-bottom:24px}
+.label{margin-bottom:8px}
+.note{margin-top:16px}
+.two{gap:44px;margin-bottom:4px}
+p.lead{margin:8px 0 14px}
+.legend{gap:14px 18px;margin-bottom:20px}
+.stepper{gap:44px}
+.stepper .controls{margin:6px 0 20px}
+.stepper .note{margin-top:0;min-height:2.9em}
+.mem{margin-bottom:22px;padding:14px 18px}
+.mem .row{margin:8px 0}
+.tabs{margin-bottom:20px}
+.out{min-height:0}
+.stepper .out,.runner .out{min-height:3.2em}
+.runner .CodeMirror pre.CodeMirror-line{padding-left:10px}
+.results li.muted{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:17px}
+@media (max-height:780px) and (min-width:901px){
+  .slide{padding-top:28px}
+  h1{margin-bottom:20px}
+  .slide p{margin-bottom:18px}
+  .code{margin-bottom:20px}
+  .out{margin-bottom:18px}
+  .mem{margin-bottom:16px;padding:10px 14px}
+  .mem .row{margin:5px 0}
+  .stepper .controls{margin:4px 0 14px}
+  .legend{gap:10px 16px}
+}
+@media (max-width:900px){ .slide{padding-top:24px} .two,.stepper{gap:24px} }
+</style>
+</head>
+<body class="cm-s-default">
+
+<!-- 1 -->
+<section class="slide" id="s1"><div class="inner">
+  <h1>Dictionaries</h1>
+  <div class="t-demo">
+    <div class="t-expr" id="s1expr"></div>
+    <span class="t-arrow">&#8594;</span>
+    <div id="s1dict"></div>
+    <span class="t-arrow">&#8594;</span>
+    <div class="t-res" id="s1res"></div>
+  </div>
+</div></section>
+
+<!-- 2 -->
+<section class="slide" id="s2"><div class="inner">
+  <h1>Parallel lists</h1>
+  <p>So far we've stored related data in parallel lists. Values at the same index belong together.</p>
+  <div class="two">
+    <div>
+      <div class="code" id="s2lists"></div>
+      <p class="lead">To get Sam's score we have to search for his index first and then use it in the other list</p>
+      <div class="code" id="s2loop"></div>
+      <div class="label">Output</div><pre class="out">72</pre>
+    </div>
+    <div class="par-wrap" id="s2par"></div>
+  </div>
+</div></section>
+
+<!-- 3 -->
+<section class="slide" id="s3"><div class="inner">
+  <h1>Keys and values</h1>
+  <p>A dictionary stores data as pairs. Each pair has two parts:</p>
+  <div class="defs">
+    <div><span class="k">key</span><span>what you look up</span></div>
+    <div><span class="v">value</span><span>what you get back</span></div>
+  </div>
+  <p>A real dictionary works the same way. You look up a word and its definition is right next to it.</p>
+  <div class="two">
+    <div><div class="label">A real dictionary</div><div id="s3book"></div></div>
+    <div><div class="label">Our class</div><div id="s3dict"></div></div>
+  </div>
+  <p class="note">In our class each key is a name and each value is a score. To get Sam's score you just ask for Sam.</p>
+</div></section>
+
+<!-- 4 -->
+<section class="slide" id="s4"><div class="inner">
+  <h1>Writing a dictionary</h1>
+  <div class="code big" id="s4code"></div>
+  <div class="two">
+    <div class="legend">
+      <span class="sw s">{ }</span><span>Curly brackets go around the whole dictionary</span>
+      <span class="sw k">"name"</span><span>Key</span>
+      <span class="sw s">:</span><span>Separates a key from its value</span>
+      <span class="sw v">"Biscuit"</span><span>Value</span>
+      <span class="sw s">,</span><span>Separates the pairs</span>
+    </div>
+    <div>
+      <p>A key and its value together are called a <b>pair</b>. Each key can only appear once because it's how you find the value. Values can be anything and they can repeat.</p>
+      <p style="margin-bottom:8px">Longer dictionaries are usually written with one pair per line:</p>
+      <div class="code" id="s4multi"></div>
+    </div>
+  </div>
+</div></section>
+
+<!-- 5 -->
+<section class="slide" id="s5"><div class="inner">
+  <h1>Getting a value</h1>
+  <p>To get a value you put its key in square brackets. It works just like list indexing except you use a key instead of a position.</p>
+  <div id="s5step"></div>
+</div></section>
+
+<!-- 6 -->
+<section class="slide" id="s6"><div class="inner">
+  <h1>Missing keys</h1>
+  <p>If you ask for a key that isn't there, Python has nothing to give back. The program stops with a <b>KeyError</b>. <code>.get()</code> lets you look up a key without that risk.</p>
+  <div id="s6step"></div>
+</div></section>
+
+<!-- 7 -->
+<section class="slide" id="s7"><div class="inner">
+  <h1>Changing, adding and removing</h1>
+  <p>Assigning to a key does one of two things. If the key is already there its value is replaced. If it isn't, Python adds a new pair.</p>
+  <div id="s7step"></div>
+</div></section>
+
+<!-- 8 -->
+<section class="slide" id="s8"><div class="inner">
+  <h1>Checking for a key</h1>
+  <p>Before you look up a key you can check that it's there with <code>in</code>. It gives back <code>True</code> or <code>False</code>.</p>
+  <div id="s8step"></div>
+</div></section>
+
+<!-- 9 -->
+<section class="slide" id="s9"><div class="inner">
+  <h1>Looping over a dictionary</h1>
+  <p>Looping over a list gives you each item. Looping over a dictionary gives you each key and you use the key to get its value.</p>
+  <div id="s9step"></div>
+</div></section>
+
+<!-- 10 -->
+<section class="slide" id="s10"><div class="inner">
+  <h1>Unpacking</h1>
+  <p>If you put two variables on the left of <code>=</code>, Python gives each one a value in order. We'll need this for the next loop.</p>
+  <div id="s10step"></div>
+</div></section>
+
+<!-- 11 -->
+<section class="slide" id="s11"><div class="inner">
+  <h1>Looping with .items()</h1>
+  <p><code>.items()</code> gives you each key and its value together. Unpacking puts them into two variables so you don't need to look anything up.</p>
+  <div id="s11step"></div>
+</div></section>
+
+<!-- 12 -->
+<section class="slide" id="s12"><div class="inner">
+  <h1>Counting with a dictionary</h1>
+  <p>Dictionaries are good for counting. Each different thing becomes a key and its value is how many times we've seen it.</p>
+  <div id="s12step"></div>
+</div></section>
+
+<!-- 13 -->
+<section class="slide" id="s13"><div class="inner">
+  <h1>f-strings</h1>
+  <p>Joining strings with <code>+</code> gets messy and numbers need <code>str()</code> first. An f-string lets you put variables straight into a string. Write <b>f</b> before the quotes and put each variable in curly brackets.</p>
+  <div class="controls"><label style="font-size:var(--fs)">name <input class="txtin" id="s13n" value="Maya" maxlength="10"></label><label style="font-size:var(--fs)">age <input class="txtin" id="s13a" value="14" maxlength="3" inputmode="numeric"></label></div>
+  <div class="two" style="grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)">
+    <div>
+      <div class="label">Without an f-string</div><div class="code" id="s13old"></div>
+      <div class="label">With f-strings</div><div class="code" id="s13new"></div>
+    </div>
+    <div><div class="label">Output</div><div class="out" id="s13out" style="line-height:2"></div></div>
+  </div>
+  <p class="note">You can also do math inside the brackets like <code>{age + 1}</code></p>
+</div></section>
+
+<!-- 14 -->
+<section class="slide" id="s14"><div class="inner">
+  <h1>enumerate</h1>
+  <p>Sometimes you need a count as well as each item, like when you print a numbered list. <code>enumerate</code> gives you both. <code>start=1</code> makes the count start at 1.</p>
+  <div id="s14step"></div>
+</div></section>
+
+<!-- 15 -->
+<section class="slide" id="s15"><div class="inner">
+  <h1>zip</h1>
+  <p>When two lists line up, <code>zip</code> pairs them together. It takes the first item from each list, then the second and so on.</p>
+  <div id="s15step"></div>
+</div></section>
+
+<!-- 16 -->
+<section class="slide" id="s16"><div class="inner">
+  <h1>zip into a dictionary</h1>
+  <p><code>zip</code> makes pairs and a dictionary is made of pairs. That means <code>dict()</code> can turn the pairs from <code>zip</code> straight into a dictionary.</p>
+  <div id="s16step"></div>
+</div></section>
+
+<!-- 17 -->
+<section class="slide" id="s17"><div class="inner">
+  <h1>Built-in functions</h1>
+  <p>Python already has functions for jobs you'd usually write a loop for</p>
+  <div id="s17step"></div>
+</div></section>
+
+<!-- 18 -->
+<section class="slide" id="s18"><div class="inner">
+  <h1>Common mistakes</h1>
+  <p>Run each example to see what goes wrong and then press <b>Show the fix</b></p>
+  <div class="tabs" id="s18tabs"></div>
+  <p id="s18why"></p>
+  <div id="s18run" style="max-width:780px"></div>
+</div></section>
+
+<!-- 19 -->
+<section class="slide" id="s19"><div class="inner">
+  <h1>Practice</h1>
+  <p>Pick a task and write the function. Press <b>Check</b> to test it.</p>
+  <div class="tabs" id="s19tabs"></div>
+  <p id="s19desc"></p>
+  <div class="hint" id="s19hint"></div>
+  <div class="two">
+    <div id="s19run"></div>
+    <div><div class="label">Tests</div><ul class="results" id="s19res"><li class="muted">Press Check to test your function</li></ul></div>
+  </div>
+</div></section>
+
+<div class="bar" id="bar"></div>
+<div class="nav">
+  <span id="pystat" class="muted">Python: not loaded yet</span>
+  <div class="right">
+    <button class="btn" id="prev">&#9664; Back</button>
+    <span id="counter"></span>
+    <button class="btn primary" id="next">Next &#9654;</button>
+  </div>
+</div>
+
+<script>
+/* ---------- helpers ---------- */
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const escA = s => esc(s).replace(/"/g, '&quot;');
+const $ = id => document.getElementById(id);
+const unq = v => /^".*"$/.test(v) ? v.slice(1, -1) : v;
+
+function hl(text){
+  // CodeMirror colors f-strings oddly, so treat f"..." as one string
+  return text.split(/(f"[^"\n]*")/).map((part, i) => i % 2 ? `<span class="cm-string">${esc(part)}</span>` : hlPlain(part)).join('');
+}
+function hlPlain(text){
+  let html = '';
+  CodeMirror.runMode(text, 'python', (tok, style) => {
+    const t = esc(tok);
+    html += style ? `<span class="${style.split(' ').map(s => 'cm-' + s).join(' ')}">${t}</span>` : t;
+  });
+  return html;
+}
+
+/* dictionary picture. pairs = [[keyRepr, valueRepr], ...] */
+function dictHTML(pairs, o = {}){
+  const rows = pairs.map(([k, v]) => {
+    const c = (o.cls && o.cls[k]) || '';
+    const kc = o.lit && o.lit[k] && o.lit[k].includes('k') ? ' lit' : '';
+    const vc = o.lit && o.lit[k] && o.lit[k].includes('v') ? ' lit' : (o.wrong === k ? ' wrong' : '');
+    return `<div class="drow ${c} ${o.hi === k ? 'hi' : ''}" data-k="${escA(k)}"><span class="dk${kc}">${hl(k)}</span><span class="darr">&#8594;</span><span class="dv${vc}">${hl(v)}</span></div>`;
+  }).join('');
+  return `<div class="dict">${o.name ? `<div class="dname">${esc(o.name)}</div>` : ''}${o.head === false ? '' : '<div class="dhead"><span>key</span><span></span><span>value</span></div>'}${rows || '<div class="dempty">(empty)</div>'}</div>`;
+}
+/* list picture. items = [repr, ...] */
+function listHTML(items, o = {}){
+  return `<div class="lst">${items.map((v, i) => `<div class="cell ${o.hi === i ? 'hi' : ''} ${(o.dim || []).includes(i) ? 'dim' : ''}">${o.noidx ? '' : `<span class="idx">${i}</span>`}<span class="box">${hl(v)}</span></div>`).join('')}</div>`;
+}
+const row = (name, html) => `<div class="row"><span class="vn">${esc(name)}</span>${html}</div>`;
+const chip = v => `<span class="chip">${esc(v)}</span>`;
+function makeTabs(el, names, onSel, mono){
+  el.innerHTML = '';
+  names.forEach((n, i) => { const b = document.createElement('button'); b.className = 'tab' + (mono ? ' mono' : ''); b.textContent = n; b.onclick = () => sel(i); el.appendChild(b); });
+  function sel(i){ [...el.children].forEach((b, k) => b.classList.toggle('on', k === i)); onSel(i); }
+  sel(0);
+}
+
+/* ---------- Python (Pyodide) ---------- */
+let pyPromise = null, pyReady = false;
+const pystat = $('pystat');
+function loadPy(){
+  if (!pyPromise){
+    pystat.textContent = 'Python: loading...';
+    pyPromise = new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js';
+      s.onload = () => loadPyodide().then(py => { pyReady = true; pystat.textContent = 'Python: ready'; res(py); }, rej);
+      s.onerror = rej;
+      document.head.appendChild(s);
+    });
+    pyPromise.catch(() => { pyPromise = null; pystat.textContent = 'Python: could not load (check internet)'; });
+  }
+  return pyPromise;
+}
+function cleanErr(msg){
+  const ls = msg.trim().split('\n');
+  let n = null;
+  for (const l of ls){ const m = l.match(/File "<exec>", line (\d+)/); if (m) n = m[1]; }
+  return (n ? `Error on line ${n}\n` : '') + ls[ls.length - 1];
+}
+async function pyExec(py, ns, code){
+  const out = [];
+  py.setStdout({ batched: s => out.push(s) });
+  py.setStderr({ batched: s => out.push(s) });
+  let err = '';
+  try { await py.runPythonAsync(code, { globals: ns }); }
+  catch (e) { err = cleanErr(String(e.message || e)); }
+  try { py.runPython('import sys\nsys.stdout.flush()'); } catch (e) {}
+  return { text: out.join('\n'), err };
+}
+async function runPy(code){
+  let py;
+  try { py = await loadPy(); } catch (e) { return { text: '', err: 'Python could not start. Check your internet connection and reload the page.' }; }
+  const ns = py.globals.get('dict')();
+  const r = await pyExec(py, ns, code);
+  ns.destroy();
+  return r;
+}
+function showRes(out, r){
+  let h = esc(r.text);
+  if (r.err) h += (h ? '\n' : '') + `<span class="err">${esc(r.err)}</span>`;
+  out.innerHTML = h || '<span class="muted">(nothing was printed)</span>';
+}
+
+/* ---------- Runner: editable code + Run ---------- */
+const IDLE = '<span class="muted">Press Run to see what happens</span>';
+function makeRunner(root, code, extras = []){
+  root.classList.add('runner');
+  root.innerHTML = `<div class="ed"></div><div class="controls" style="margin-top:12px"><button class="btn primary run">Run</button><button class="btn rst">Reset code</button></div><div class="label">Output</div><pre class="out">${IDLE}</pre>`;
+  const r = { orig: code, out: root.querySelector('.out') };
+  r.cm = CodeMirror(root.querySelector('.ed'), {
+    value: code, mode: 'python', lineNumbers: true, indentUnit: 4, tabSize: 4, viewportMargin: Infinity,
+    extraKeys: {
+      Tab: cm => cm.somethingSelected() ? cm.indentSelection('add') : cm.replaceSelection('    ', 'end'),
+      'Shift-Tab': cm => cm.indentSelection('subtract'),
+      'Ctrl-Enter': () => r.run(), 'Cmd-Enter': () => r.run()
+    }
+  });
+  r.run = async () => {
+    r.out.innerHTML = pyReady ? '<span class="muted">Running...</span>' : '<span class="muted">Starting Python. The first run can take a few seconds...</span>';
+    showRes(r.out, await runPy(r.cm.getValue()));
+  };
+  r.setCode = c => { r.cm.setValue(c); r.out.innerHTML = IDLE; };
+  root.querySelector('.run').onclick = r.run;
+  root.querySelector('.rst').onclick = () => r.setCode(r.orig);
+  const ctr = root.querySelector('.controls');
+  extras.forEach(([label, fn]) => {
+    const b = document.createElement('button'); b.className = 'btn'; b.textContent = label;
+    b.onclick = () => fn(r, b); ctr.appendChild(b);
+  });
+  return r;
+}
+
+/* ---------- Stepper: go through code one line at a time ----------
+   Each step: { line, note, out, err, ...state }. State fields carry over to the next step,
+   except the ones listed in cfg.reset, which go back to their start value. */
+function makeStepper(root, cfg){
+  root.innerHTML = `<div class="stepper"><div><div class="code stepcode"></div><div class="controls"><button class="btn" data-a="back">&#9664; Back</button><button class="btn primary" data-a="next">Next step &#9654;</button><button class="btn" data-a="reset">Start over</button><span class="muted cnt"></span></div><p class="note"></p></div><div><div class="label">Memory</div><div class="mem"></div><div class="label">Output</div><pre class="out"></pre></div></div>`;
+  root.querySelector('.stepcode').innerHTML = cfg.code.split('\n').map((l, i) => `<div class="ln"><span class="num">${i + 1}</span><span class="arr"></span><span class="txt">${hl(l) || ' '}</span></div>`).join('');
+  const lnEls = [...root.querySelectorAll('.ln')];
+  const resetKeys = cfg.reset || [];
+  const init = { ...cfg.start, outs: [], note: 'Press <b>Next step</b> to run the code one line at a time' };
+  const states = [];
+  let prev = { ...cfg.start }, outs = [];
+  cfg.steps.forEach(s => {
+    if (s.out !== undefined) outs = outs.concat([{ t: s.out, err: !!s.err }]);
+    const base = { ...prev };
+    resetKeys.forEach(k => base[k] = cfg.start[k]);
+    const st = { ...base, ...s, outs };
+    states.push(st);
+    prev = { ...st };
+    delete prev.out; delete prev.err; delete prev.note; delete prev.line;
+  });
+  let i = -1;
+  const outEl = root.querySelector('.out'), noteEl = root.querySelector('.note'), mem = root.querySelector('.mem');
+  function render(){
+    const st = i < 0 ? init : states[i];
+    lnEls.forEach((el, k) => el.classList.toggle('cur', st.line === k + 1));
+    outEl.innerHTML = st.outs.map(o => o.err ? `<span class="err">${esc(o.t)}</span>` : esc(o.t)).join('\n');
+    mem.innerHTML = (i < 0 ? '' : cfg.panel(st)) || '<span class="empty">(nothing yet)</span>';
+    noteEl.innerHTML = st.note || '';
+    root.querySelector('[data-a=back]').disabled = i < 0;
+    root.querySelector('[data-a=next]').disabled = i >= states.length - 1;
+    root.querySelector('.cnt').textContent = i < 0 ? '' : `Step ${i + 1} of ${states.length}`;
+  }
+  root.querySelector('[data-a=next]').onclick = () => { if (i < states.length - 1){ i++; render(); } };
+  root.querySelector('[data-a=back]').onclick = () => { if (i >= 0){ i--; render(); } };
+  root.querySelector('[data-a=reset]').onclick = () => { i = -1; render(); };
+  render();
+}
+
+/* shared data */
+const PET = [['"name"', '"Biscuit"'], ['"animal"', '"dog"'], ['"age"', '3']];
+const PET_CODE = 'pet = {"name": "Biscuit", "animal": "dog", "age": 3}';
+const SCORES = [['"Maya"', '87'], ['"Sam"', '72'], ['"Ava"', '95']];
+const SCORES_CODE = 'scores = {"Maya": 87, "Sam": 72, "Ava": 95}';
+const DICT_RESET = ['hi', 'cls', 'lit', 'wrong'];
+const DSTART = { d: null, hi: null, cls: null, lit: null, wrong: null };
+const dictPanel = name => st => st.d ? row(name, dictHTML(st.d, { hi: st.hi, cls: st.cls, lit: st.lit, wrong: st.wrong })) : '';
+
+/* parallel lists picture: one row per index */
+function parHTML(cols, o = {}){
+  const n = Math.max(...cols.map(c => c[1].length));
+  const hi = j => (o.hi === j ? ' col-hi' : '');
+  let h = `<div class="par" style="grid-template-columns:auto repeat(${cols.length}, auto)"><span class="pi">index</span>`;
+  cols.forEach(([name]) => h += `<span class="pl">${esc(name)}</span>`);
+  for (let j = 0; j < n; j++){
+    h += `<span class="pi${hi(j)}">${j}</span>`;
+    cols.forEach(([, items]) => h += `<span class="pb${hi(j)}">${hl(items[j])}</span>`);
+  }
+  return h + '</div>';
+}
+
+/* ---------- Slide 1 ---------- */
+(() => {
+  let k = 0;
+  function tick(){
+    const [key, val] = PET[k];
+    $('s1expr').innerHTML = hl(`pet[${key}]`);
+    $('s1dict').innerHTML = dictHTML(PET, { name: 'pet', hi: key, head: false });
+    $('s1res').textContent = val;
+    k = (k + 1) % PET.length;
+  }
+  tick();
+  setInterval(() => { if (slides[cur] && slides[cur].id === 's1') tick(); }, 2200);
+})();
+
+/* ---------- Slides 2 to 4 ---------- */
+$('s2lists').innerHTML = hl('names = ["Maya", "Sam", "Ava"]\nscores = [87, 72, 95]');
+$('s2loop').innerHTML = hl('for i in range(len(names)):\n    if names[i] == "Sam":\n        print(scores[i])');
+$('s2par').innerHTML = parHTML([['names', ['"Maya"', '"Sam"', '"Ava"']], ['scores', ['87', '72', '95']]], { hi: 1 });
+$('s3book').innerHTML = '<table class="book"><tr><th>key: word</th><th>value: definition</th></tr><tr><td>huge</td><td>very big</td></tr><tr><td>tiny</td><td>very small</td></tr><tr><td>quick</td><td>fast</td></tr></table>';
+$('s3dict').innerHTML = dictHTML(SCORES, { name: 'scores' });
+(() => {
+  const S = t => `<span class="s">${t}</span>`, K = t => `<span class="k">${hl(t)}</span>`, V = t => `<span class="v">${hl(t)}</span>`;
+  $('s4code').innerHTML = hl('pet = ') + S('{') + PET.map(([k, v], i) => K(k) + S(':') + ' ' + V(v) + (i < PET.length - 1 ? S(',') + ' ' : '')).join('') + S('}');
+  $('s4multi').innerHTML = hl('pet = {\n    "name": "Biscuit",\n    "animal": "dog",\n    "age": 3\n}');
+})();
+
+/* ---------- Slide 5: getting a value ---------- */
+makeStepper($('s5step'), {
+  code: PET_CODE + '\n\nprint(pet["name"])\nprint(pet["age"])',
+  start: DSTART, reset: DICT_RESET, panel: dictPanel('pet'),
+  steps: [
+    { line: 1, d: PET, note: '<code>pet</code> is created with three pairs' },
+    { line: 3, hi: '"name"', lit: { '"name"': 'v' }, out: 'Biscuit', note: 'Python finds the key <code>"name"</code> and gives back the value next to it' },
+    { line: 4, hi: '"age"', lit: { '"age"': 'v' }, out: '3', note: '<code>pet["age"]</code> gives 3' }
+  ]
+});
+
+/* ---------- Slide 6: missing keys ---------- */
+makeStepper($('s6step'), {
+  code: PET_CODE + '\n\nprint(pet.get("name"))\nprint(pet.get("color"))\nprint(pet.get("color", "unknown"))\nprint(pet["color"])',
+  start: DSTART, reset: DICT_RESET, panel: dictPanel('pet'),
+  steps: [
+    { line: 1, d: PET, note: '<code>pet</code> has no <code>"color"</code> key' },
+    { line: 3, hi: '"name"', lit: { '"name"': 'v' }, out: 'Biscuit', note: '<code>.get()</code> works just like square brackets when the key is there' },
+    { line: 4, out: 'None', note: 'When the key is missing it gives back <code>None</code> instead of crashing' },
+    { line: 5, out: 'unknown', note: 'You can give <code>.get()</code> a backup value to use instead of <code>None</code>' },
+    { line: 6, out: "KeyError: 'color'", err: true, note: 'Square brackets have no backup so the program stops here' }
+  ]
+});
+
+/* ---------- Slide 7: changing, adding, removing ---------- */
+(() => {
+  const a = PET.map(p => [...p]);
+  const b = [['"name"', '"Biscuit"'], ['"animal"', '"dog"'], ['"age"', '4']];
+  const c = b.concat([['"color"', '"brown"']]);
+  const d = [['"name"', '"Biscuit"'], ['"age"', '4'], ['"color"', '"brown"']];
+  makeStepper($('s7step'), {
+    code: PET_CODE + '\n\npet["age"] = 4\npet["color"] = "brown"\ndel pet["animal"]\n\nprint(pet)',
+    start: DSTART, reset: DICT_RESET, panel: dictPanel('pet'),
+    steps: [
+      { line: 1, d: a, note: '<code>pet</code> is created with three pairs' },
+      { line: 3, d: b, cls: { '"age"': 'changed' }, note: '<code>"age"</code> is already a key so 3 is replaced with 4' },
+      { line: 4, d: c, cls: { '"color"': 'new' }, note: '<code>"color"</code> isn\'t a key yet so Python adds a new pair' },
+      { line: 5, d: c, cls: { '"animal"': 'del' }, note: '<code>del</code> removes a key and its value' },
+      { line: 7, d: d, out: "{'name': 'Biscuit', 'age': 4, 'color': 'brown'}", note: 'Printing a dictionary shows all of its pairs' }
+    ]
+  });
+})();
+
+/* ---------- Slide 8: in ---------- */
+makeStepper($('s8step'), {
+  code: PET_CODE + '\n\nprint("name" in pet)\nprint("color" in pet)\nprint("Biscuit" in pet)\n\nif "color" in pet:\n    print(pet["color"])\nelse:\n    print("No color")',
+  start: DSTART, reset: DICT_RESET, panel: dictPanel('pet'),
+  steps: [
+    { line: 1, d: PET, note: '<code>pet</code> is created with three pairs' },
+    { line: 3, lit: { '"name"': 'k' }, out: 'True', note: '<code>"name"</code> is one of the keys so this is True' },
+    { line: 4, out: 'False', note: 'There\'s no <code>"color"</code> key so this is False' },
+    { line: 5, wrong: '"name"', out: 'False', note: '<code>"Biscuit"</code> is in the dictionary but as a value. <code>in</code> only looks at keys so this is False.' },
+    { line: 7, note: 'This is how <code>in</code> is usually used. There\'s no <code>"color"</code> key so the <code>else</code> part runs.' },
+    { line: 10, out: 'No color', note: '<code>pet["color"]</code> never runs so there\'s no KeyError' }
+  ]
+});
+
+/* ---------- Slide 9: looping over keys ---------- */
+(() => {
+  const steps = [{ line: 1, d: SCORES, note: '<code>scores</code> is created' }];
+  SCORES.forEach(([k, v], i) => {
+    steps.push({ line: 3, name: k, lit: { [k]: 'k' }, note: i === 0 ? `The first time through the loop <code>name</code> holds the first key ${esc(k)}` : `Next time through <code>name</code> holds ${esc(k)}` });
+    steps.push({ line: 4, lit: { [k]: 'kv' }, out: `${unq(k)} ${v}`, note: i === 0 ? `<code>scores[name]</code> uses that key to get the value ${v}` : `<code>scores[name]</code> gives ${v}` });
+  });
+  steps.push({ line: 0, note: 'The loop ends after the last key' });
+  makeStepper($('s9step'), {
+    code: SCORES_CODE + '\n\nfor name in scores:\n    print(name, scores[name])',
+    start: { ...DSTART, name: null }, reset: DICT_RESET, steps,
+    panel: st => dictPanel('scores')(st) + (st.name ? row('name', chip(st.name)) : '')
+  });
+})();
+
+/* ---------- Slide 10: unpacking ---------- */
+makeStepper($('s10step'), {
+  code: 'a, b = 5, 9\nprint(a, b)\n\na, b = b, a\nprint(a, b)',
+  start: { a: null, b: null },
+  panel: st => st.a ? row('a', chip(st.a)) + row('b', chip(st.b)) : '',
+  steps: [
+    { line: 1, a: '5', b: '9', note: '<code>a</code> gets the first value and <code>b</code> gets the second' },
+    { line: 2, out: '5 9' },
+    { line: 4, a: '9', b: '5', note: 'Python works out the right side first which gives <code>9, 5</code>. Then it hands those to <code>a</code> and <code>b</code> so they swap.' },
+    { line: 5, out: '9 5' }
+  ]
+});
+
+/* ---------- Slide 11: .items() ---------- */
+(() => {
+  const steps = [{ line: 1, d: SCORES, note: '<code>scores</code> is created' }];
+  SCORES.forEach(([k, v], i) => {
+    steps.push({ line: 3, name: k, score: v, lit: { [k]: 'kv' }, note: i === 0 ? `<code>.items()</code> gives ${esc(k)} and ${v} together. Unpacking puts ${esc(k)} in <code>name</code> and ${v} in <code>score</code>.` : `Next it gives ${esc(k)} and ${v}` });
+    steps.push({ line: 4, out: `${unq(k)} ${v}` });
+  });
+  steps.push({ line: 0, note: 'Same output as the last slide but we didn\'t have to look anything up. <code>scores.values()</code> gives just the values.' });
+  makeStepper($('s11step'), {
+    code: SCORES_CODE + '\n\nfor name, score in scores.items():\n    print(name, score)',
+    start: { ...DSTART, name: null, score: null }, reset: DICT_RESET, steps,
+    panel: st => dictPanel('scores')(st) + (st.name ? row('name', chip(st.name)) + row('score', chip(st.score)) : '')
+  });
+})();
+
+/* ---------- Slide 12: counting ---------- */
+(() => {
+  const votes = ['"pizza"', '"tacos"', '"pizza"', '"sushi"', '"pizza"'];
+  const steps = [{ line: 1, votes: true, note: '<code>votes</code> holds everyone\'s choice' }];
+  let counts = [];
+  steps.push({ line: 2, d: [], note: '<code>counts</code> starts empty' });
+  votes.forEach((f, i) => {
+    const first = !counts.some(p => p[0] === f);
+    steps.push({ line: 4, idx: i, food: f, note: `The loop takes the next vote ${esc(f)}` });
+    steps.push({ line: 5, hi: first ? null : f, note: first ? `${esc(f)} isn't in <code>counts</code> yet` : `${esc(f)} is already in <code>counts</code>` });
+    if (first){
+      counts = counts.concat([[f, '1']]);
+      steps.push({ line: 8, d: counts, cls: { [f]: 'new' }, note: `Add ${esc(f)} with a count of 1` });
+    } else {
+      counts = counts.map(p => p[0] === f ? [f, String(+p[1] + 1)] : p);
+      steps.push({ line: 6, d: counts, cls: { [f]: 'changed' }, note: 'Add 1 to its count' });
+    }
+  });
+  steps.push({ line: 10, idx: null, food: null, out: "{'pizza': 3, 'tacos': 1, 'sushi': 1}", note: 'Lines 5 to 8 can also be written as one line:<br><code>counts[food] = counts.get(food, 0) + 1</code>' });
+  makeStepper($('s12step'), {
+    code: 'votes = ["pizza", "tacos", "pizza", "sushi", "pizza"]\ncounts = {}\n\nfor food in votes:\n    if food in counts:\n        counts[food] = counts[food] + 1\n    else:\n        counts[food] = 1\n\nprint(counts)',
+    start: { ...DSTART, votes: false, idx: null, food: null }, reset: DICT_RESET, steps,
+    panel: st => (st.votes ? row('votes', listHTML(votes, { hi: st.idx, noidx: true })) : '') + (st.d ? row('counts', dictHTML(st.d, { head: false, hi: st.hi, cls: st.cls })) : '') + (st.food ? row('food', chip(st.food)) : '')
+  });
+})();
+
+/* ---------- Slide 13: f-strings ---------- */
+(() => {
+  function render(){
+    const n = $('s13n').value.replace(/["'\\{}]/g, '').trim() || 'Maya';
+    let a = parseInt($('s13a').value, 10); if (isNaN(a)) a = 14;
+    const B = s => `<span class="blue-c">${s}</span>`, O = s => `<span class="orange-c">${s}</span>`;
+    const str = t => `<span class="cm-string">${esc(t)}</span>`;
+    $('s13old').innerHTML = hl(`name = "${n}"`) + '\n' + hl(`age = ${a}`) + '\n\n' + hl('print(') + B(hl('name')) + hl(' + " is " + ') + O(hl('str(age)')) + hl(' + " years old"') + ')';
+    $('s13new').innerHTML = hl('print(') + str('f"') + B(str('{name}')) + str(' is ') + O(str('{age}')) + str(' years old"') + ')\n' +
+      hl('print(') + str('f"Next year: ') + O(str('{age + 1}')) + str('"') + ')';
+    $('s13out').innerHTML = `${B(esc(n))} is ${O(a)} years old\n${B(esc(n))} is ${O(a)} years old\nNext year: ${O(a + 1)}`;
+  }
+  $('s13n').oninput = render; $('s13a').oninput = render;
+  render();
+})();
+
+/* ---------- Slide 14: enumerate ---------- */
+(() => {
+  const names = ['"Maya"', '"Sam"', '"Ava"'];
+  const steps = [{ line: 1, show: true, note: '<code>names</code> is created' }];
+  names.forEach((n, i) => {
+    steps.push({ line: 3, idx: i, i: String(i + 1), name: n, note: i === 0 ? `<code>enumerate</code> gives the count 1 and the item ${esc(n)}. Unpacking puts them in <code>i</code> and <code>name</code>.` : `Next it gives ${i + 1} and ${esc(n)}` });
+    steps.push({ line: 4, out: `${i + 1}. ${unq(n)}` });
+  });
+  steps.push({ line: 0, idx: null, note: 'Without <code>start=1</code> the count would start at 0' });
+  makeStepper($('s14step'), {
+    code: 'names = ["Maya", "Sam", "Ava"]\n\nfor i, name in enumerate(names, start=1):\n    print(f"{i}. {name}")',
+    start: { show: false, idx: null, i: null, name: null }, steps,
+    panel: st => st.show ? row('names', listHTML(names, { hi: st.idx })) + (st.i ? row('i', chip(st.i)) + row('name', chip(st.name)) : '') : ''
+  });
+})();
+
+/* ---------- Slide 15: zip ---------- */
+(() => {
+  const N = ['"Maya"', '"Sam"', '"Ava"', '"Leo"'], S = ['87', '72', '95'];
+  const steps = [{ line: 1, n: true, note: '<code>names</code> has four items' }, { line: 2, s: true, note: '<code>scores</code> has three' }];
+  S.forEach((sc, i) => {
+    steps.push({ line: 4, idx: i, name: N[i], score: sc, note: i === 0 ? `<code>zip</code> takes the first item from each list. Unpacking puts ${esc(N[i])} in <code>name</code> and ${sc} in <code>score</code>.` : `Next it takes ${esc(N[i])} and ${sc}` });
+    steps.push({ line: 5, out: `${unq(N[i])} got ${sc}` });
+  });
+  steps.push({ line: 0, idx: null, dim: [3], note: '<code>scores</code> has run out so <code>zip</code> stops. <code>"Leo"</code> is left out.' });
+  makeStepper($('s15step'), {
+    code: 'names = ["Maya", "Sam", "Ava", "Leo"]\nscores = [87, 72, 95]\n\nfor name, score in zip(names, scores):\n    print(f"{name} got {score}")',
+    start: { n: false, s: false, idx: null, name: null, score: null, dim: [] }, steps,
+    panel: st => (st.n ? row('names', listHTML(N, { hi: st.idx, noidx: true, dim: st.dim })) : '') + (st.s ? row('scores', listHTML(S, { hi: st.idx, noidx: true })) : '') + (st.idx !== null && st.idx !== undefined ? row('name', chip(st.name)) + row('score', chip(st.score)) : '')
+  });
+})();
+
+/* ---------- Slide 16: dict(zip()) ---------- */
+(() => {
+  const N = ['"Maya"', '"Sam"', '"Ava"'], S = ['87', '72', '95'];
+  const R = N.map((n, i) => [n, S[i]]);
+  makeStepper($('s16step'), {
+    code: 'names = ["Maya", "Sam", "Ava"]\nscores = [87, 72, 95]\n\nresults = dict(zip(names, scores))\nprint(results["Ava"])',
+    start: { ...DSTART, lists: false }, reset: DICT_RESET,
+    panel: st => (st.lists ? row('names', listHTML(N, { noidx: true })) + row('scores', listHTML(S, { noidx: true })) : '') + (st.d ? row('results', dictHTML(st.d, { head: false, hi: st.hi, cls: st.cls, lit: st.lit })) : ''),
+    steps: [
+      { line: 1, lists: true, note: 'Two lists where items in the same position belong together' },
+      { line: 4, d: R, cls: { '"Maya"': 'new', '"Sam"': 'new', '"Ava"': 'new' }, note: '<code>zip</code> makes the pairs and <code>dict()</code> turns each one into a key and its value' },
+      { line: 5, lit: { '"Ava"': 'v' }, hi: '"Ava"', out: '95', note: '<code>results</code> is a normal dictionary so you can look things up by name' }
+    ]
+  });
+})();
+
+/* ---------- Slide 17: built-ins ---------- */
+(() => {
+  const L = ['87', '72', '95', '61'];
+  makeStepper($('s17step'), {
+    code: 'scores = [87, 72, 95, 61]\n\nprint(len(scores))\nprint(sum(scores))\nprint(max(scores))\nprint(min(scores))\nprint(sorted(scores))',
+    start: { show: false, hi: null }, reset: ['hi'],
+    panel: st => st.show ? row('scores', listHTML(L, { hi: st.hi })) : '',
+    steps: [
+      { line: 1, show: true, note: '<code>scores</code> is created' },
+      { line: 3, out: '4', note: '<code>len</code> gives the number of items' },
+      { line: 4, out: '315', note: '<code>sum</code> adds up the items. Divide it by <code>len</code> to get the average.' },
+      { line: 5, hi: 2, out: '95', note: '<code>max</code> gives the largest item' },
+      { line: 6, hi: 3, out: '61', note: '<code>min</code> gives the smallest item' },
+      { line: 7, out: '[61, 72, 87, 95]', note: '<code>sorted</code> gives back a new list in order and leaves the original alone. Add <code>reverse=True</code> to sort from largest to smallest.' }
+    ]
+  });
+})();
+
+/* ---------- Slide 18: mistakes ---------- */
+(() => {
+  const MS = [
+    { tab: 'Using a position', why: 'Dictionaries have no positions. <code>pet[0]</code> looks for a key called <code>0</code>.',
+      bad: PET_CODE + '\n\nprint(pet[0])', fix: PET_CODE + '\n\nprint(pet["name"])' },
+    { tab: 'Missing quotes', why: 'Without quotes Python thinks <code>name</code> is a variable instead of the string <code>"name"</code>',
+      bad: PET_CODE + '\n\nprint(pet[name])', fix: PET_CODE + '\n\nprint(pet["name"])' },
+    { tab: 'Missing comma', why: 'Pairs must be separated by commas',
+      bad: 'pet = {"name": "Biscuit" "age": 3}\nprint(pet)', fix: 'pet = {"name": "Biscuit", "age": 3}\nprint(pet)' },
+    { tab: 'Using in on a value', why: 'There\'s no error but the answer is wrong. <code>in</code> only checks keys. Use <code>pet.values()</code> to check the values.',
+      bad: PET_CODE + '\n\nif "Biscuit" in pet:\n    print("Found Biscuit")\nelse:\n    print("No Biscuit")',
+      fix: PET_CODE + '\n\nif "Biscuit" in pet.values():\n    print("Found Biscuit")\nelse:\n    print("No Biscuit")' }
+  ];
+  let ci = 0;
+  const r = makeRunner($('s18run'), MS[0].bad, [['Show the fix', rr => { rr.setCode(MS[ci].fix); rr.out.innerHTML = '<span class="muted">Fixed version. Press Run to try it.</span>'; }]]);
+  makeTabs($('s18tabs'), MS.map(m => m.tab), i => { ci = i; $('s18why').innerHTML = MS[i].why; r.orig = MS[i].bad; r.setCode(MS[i].bad); });
+})();
+
+/* ---------- Slide 19: practice ---------- */
+(() => {
+  const CH = [
+    { tab: 'price', desc: '<code>price(item)</code> should return the price of <code>item</code> from <code>menu</code>, or <code>0</code> if it isn\'t on the menu',
+      start: 'menu = {"chips": 2.5, "burger": 6, "drink": 1.5}\n\ndef price(item):\n    return None  # change this line\n\nprint(price("chips"))',
+      hint: 'Use <code>.get()</code> with a default value',
+      tests: [['price("chips")', '2.5'], ['price("burger")', '6'], ['price("cake")', '0']] },
+    { tab: 'count_letters', desc: '<code>count_letters(word)</code> should return a dictionary of how many times each letter appears in <code>word</code>',
+      start: 'def count_letters(word):\n    counts = {}\n    # your code here\n    return counts\n\nprint(count_letters("banana"))',
+      hint: 'Use the same pattern as the vote counter and loop over the letters of <code>word</code>',
+      tests: [['count_letters("banana")', "{'b': 1, 'a': 3, 'n': 2}"], ['count_letters("aa")', "{'a': 2}"], ['count_letters("")', '{}']] },
+    { tab: 'pair_up', desc: '<code>pair_up(keys, values)</code> should return a dictionary made from the two lists',
+      start: 'def pair_up(keys, values):\n    return None  # change this line\n\nprint(pair_up(["a", "b"], [1, 2]))',
+      hint: 'Use <code>dict()</code> and <code>zip()</code>',
+      tests: [['pair_up(["a", "b"], [1, 2])', "{'a': 1, 'b': 2}"], ['pair_up(["x"], [True])', "{'x': True}"], ['pair_up([], [])', '{}']] },
+    { tab: 'best', desc: '<code>best(scores)</code> should return the name with the highest score',
+      start: 'def best(scores):\n    return None  # change this line\n\nprint(best({"Maya": 87, "Sam": 72, "Ava": 95}))',
+      hint: 'Loop over <code>scores.items()</code> and keep track of the best name and score so far',
+      tests: [['best({"Maya": 87, "Sam": 72, "Ava": 95})', "'Ava'"], ['best({"Leo": 50})', "'Leo'"], ['best({"A": 3, "B": 9, "C": 1})', "'B'"]] }
+  ];
+  const CHECK = `for _expr, _exp in TESTS:
+    try:
+        _v = eval(_expr)
+        _got = repr(_v)
+        _ok = _v == eval(_exp)
+    except Exception as _e:
+        _got = type(_e).__name__ + ": " + str(_e)
+        _ok = False
+    print(("PASS" if _ok else "FAIL") + "\\t" + _expr + "\\t" + _got + "\\t" + _exp)`;
+  let ci = 0;
+  const res = $('s19res');
+  const r = makeRunner($('s19run'), CH[0].start, [
+    ['Check', async rr => {
+      res.innerHTML = `<li class="muted">${pyReady ? 'Checking...' : 'Starting Python...'}</li>`;
+      let py;
+      try { py = await loadPy(); } catch (e) { res.innerHTML = '<li class="err">Python could not start</li>'; return; }
+      const ns = py.globals.get('dict')();
+      const a = await pyExec(py, ns, rr.cm.getValue());
+      if (a.err){ ns.destroy(); res.innerHTML = `<li class="err">Your code has an error:</li><li class="err" style="white-space:pre-wrap">${esc(a.err)}</li>`; return; }
+      const b = await pyExec(py, ns, CHECK.replace('TESTS', JSON.stringify(CH[ci].tests)));
+      ns.destroy();
+      const rows = b.text.split('\n').filter(Boolean).map(l => l.split('\t'));
+      const all = rows.length && rows.every(x => x[0] === 'PASS');
+      res.innerHTML = rows.map(([ok, ex, got, exp]) => ok === 'PASS'
+        ? `<li><span class="good">&#10003;</span> ${esc(ex)} gave ${esc(got)}</li>`
+        : `<li><span class="badt">&#10007;</span> ${esc(ex)} gave ${esc(got)}, should be ${esc(exp)}</li>`).join('')
+        + (all ? '<li class="good" style="margin-top:8px">All tests passed</li>' : '');
+    }],
+    ['Hint', () => { $('s19hint').style.display = 'block'; }]
+  ]);
+  CH.forEach(c => c.cur = c.start);
+  let first = true;
+  makeTabs($('s19tabs'), CH.map(c => c.tab), i => {
+    if (!first) CH[ci].cur = r.cm.getValue();
+    first = false; ci = i;
+    $('s19desc').innerHTML = CH[i].desc;
+    $('s19hint').innerHTML = CH[i].hint; $('s19hint').style.display = 'none';
+    r.orig = CH[i].start; r.setCode(CH[i].cur);
+    res.innerHTML = '<li class="muted">Press Check to test your function</li>';
+  }, true);
+})();
+
+/* ---------- Navigation: bottom buttons (and arrow keys on a keyboard) ---------- */
+const slides = [...document.querySelectorAll('.slide')];
+let cur = 0;
+function show(n){
+  n = Math.max(0, Math.min(slides.length - 1, n));
+  slides[cur].classList.remove('active');
+  cur = n;
+  const s = slides[cur];
+  s.classList.add('active'); s.scrollTop = 0;
+  $('counter').textContent = `${cur + 1} / ${slides.length}`;
+  $('bar').style.width = ((cur + 1) / slides.length * 100) + '%';
+  $('prev').disabled = cur === 0; $('next').disabled = cur === slides.length - 1;
+  history.replaceState(null, '', '#' + (cur + 1));
+  s.querySelectorAll('.CodeMirror').forEach(e => e.CodeMirror.refresh());
+}
+$('prev').onclick = () => show(cur - 1);
+$('next').onclick = () => show(cur + 1);
+document.addEventListener('keydown', e => {
+  const t = e.target;
+  if (t.closest && (t.closest('.CodeMirror') || t.matches('input,textarea,select'))) return;
+  if (e.key === 'ArrowRight' || e.key === 'PageDown'){ show(cur + 1); e.preventDefault(); }
+  else if (e.key === 'ArrowLeft' || e.key === 'PageUp'){ show(cur - 1); e.preventDefault(); }
+});
+// stop iOS Safari zooming on a fast double tap (it ignores user-scalable=no for this)
+let lastTouch = 0;
+document.addEventListener('touchend', e => {
+  const now = Date.now();
+  if (now - lastTouch < 350 && !(e.target.closest && e.target.closest('input,textarea,.CodeMirror'))){
+    e.preventDefault();
+    const b = e.target.closest && e.target.closest('button');   // still count the second tap as a click
+    if (b && !b.disabled) b.click();
+  }
+  lastTouch = now;
+}, { passive: false });
+document.addEventListener('gesturestart', e => e.preventDefault());
+show((parseInt(location.hash.slice(1)) || 1) - 1);
+window.addEventListener('load', () => setTimeout(() => loadPy().catch(() => {}), 1500));
+</script>
+</body>
+</html>
