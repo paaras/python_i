@@ -811,6 +811,18 @@ const utf8 = new TextEncoder();
 const textOrNull = bytes => { if (bytes.includes(0)) return null; try { return new TextDecoder('utf-8', { fatal: true }).decode(bytes); } catch { return null; } };
 
 const SAMPLE = `# Edit and press Run
+
+print("Hello, World!")
+`;
+const HELLO_DBG_SAMPLE = `# Edit and press Run
+# Click line numbers for breakpoints, then Debug
+
+print("Hello, World!")
+`;
+const HELLO_SAMPLE = `print("Hello, World!")
+`;
+// earlier starter code, so visitors who never edited it get the new one
+const PREV_SAMPLE = `# Edit and press Run
 # Click line numbers for breakpoints, then Debug
 
 def fib(n):
@@ -1184,9 +1196,9 @@ function loadFromHash() {
   try { history.replaceState(null, '', location.href.split('#')[0]); } catch {}
   return true;
 }
-const OLD_SAMPLE = SAMPLE.replace('# Edit and press Run\n# Click line numbers for breakpoints, then Debug\n', '# Edit this code and press Run.\n# Click line numbers to add breakpoints, then press Debug.\n');
+const OLD_SAMPLE = PREV_SAMPLE.replace('# Edit and press Run\n# Click line numbers for breakpoints, then Debug\n', '# Edit this code and press Run.\n# Click line numbers to add breakpoints, then press Debug.\n');
 function isDefault(json) {
-  try { const p = JSON.parse(json); return p.files.length === 1 && [SAMPLE, OLD_SAMPLE, ''].includes(p.files[0].t); } catch { return false; }
+  try { const p = JSON.parse(json); return p.files.length === 1 && [SAMPLE, HELLO_DBG_SAMPLE, HELLO_SAMPLE, PREV_SAMPLE, OLD_SAMPLE, ''].includes(p.files[0].t); } catch { return false; }
 }
 $('restoreBtn').onclick = () => {
   const b = store.get(BACKUP_KEY);
@@ -1519,7 +1531,7 @@ document.addEventListener('keydown', e => {
   if (saved) {
     try {
       const p = deserialize(saved);
-      if (p.files.length === 1 && p.files[0].doc && p.files[0].doc.getValue() === OLD_SAMPLE) p.files[0].doc.setValue(SAMPLE);
+      if (p.files.length === 1 && p.files[0].doc && [HELLO_DBG_SAMPLE, HELLO_SAMPLE, PREV_SAMPLE, OLD_SAMPLE].includes(p.files[0].doc.getValue())) p.files[0].doc.setValue(SAMPLE);
       setProject(p.files, p.active); loaded = true;
     } catch {}
   }
