@@ -1,0 +1,1526 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Python Playground</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<style>
+/* Layout: toolbar on top, editor | output side by side; stacked on narrow screens.
+   The file explorer is hidden behind the folder button in the editor header. */
+:root {
+  --bg: #ffffff;
+  --panel: #f6f7f9;
+  --line: #e2e5ea;
+  --fg: #1b1f24;
+  --muted: #6a7280;
+  --accent: #2f5fa7;
+  --accent-fg: #ffffff;
+  --err: #c0362c;
+  --ok: #2d7a46;
+  --hl: #fff4c2;
+  --bp: #d9473b;
+  --sel: #d7e3f6;
+  --s-kw: #8b2fa8;
+  --s-str: #2d7a46;
+  --s-num: #b5530b;
+  --s-com: #8a919c;
+  --s-def: #2f5fa7;
+  --s-builtin: #0f7c8c;
+  --ui: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15181c; --panel: #1c2026; --line: #2c323a; --fg: #e4e7eb; --muted: #8d96a3;
+    --accent: #6f9be0; --accent-fg: #0f1419; --err: #ef7a6f; --ok: #6fc28a; --hl: #3a3420;
+    --bp: #ef6a5f; --sel: #2a3a55;
+    --s-kw: #cf8ee6; --s-str: #8fcf9c; --s-num: #e9a46a; --s-com: #6c7480; --s-def: #8ab4f0;
+    --s-builtin: #6cc7d3;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--bg); color: var(--fg);
+  font: 14px/1.4 var(--ui);
+  display: flex; flex-direction: column;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+button, input { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent; }
+[hidden] { display: none !important; }
+
+/* toolbar */
+header {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  padding: 10px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px));
+  border-bottom: 1px solid var(--line);
+}
+.brand { font-weight: 700; letter-spacing: -0.01em; margin-right: 4px; }
+.spacer { flex: 1; }
+.btn {
+  border: 1px solid var(--line); background: var(--bg); border-radius: 6px;
+  padding: 6px 12px; cursor: pointer; white-space: nowrap;
+}
+.btn:hover { background: var(--panel); }
+.btn:focus-visible, .icon-btn:focus-visible, .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.stop { background: var(--err); border-color: var(--err); color: var(--bg); font-weight: 600; }
+.btn.small { font-size: 12px; padding: 3px 9px; }
+.btn:disabled { opacity: .5; cursor: default; }
+.status-wrap { display: flex; align-items: center; gap: 8px; min-width: 0; text-transform: none; letter-spacing: 0; }
+#status { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.linkish { border: 0; background: none; padding: 0; color: var(--accent); font-size: 12px; cursor: pointer; text-decoration: underline; }
+
+/* panes */
+main {
+  flex: 1; min-height: 0;
+  display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+}
+.pane { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.pane + .pane { border-left: 1px solid var(--line); }
+.pane-head {
+  display: flex; align-items: center; gap: 8px; min-height: 38px;
+  padding: 0 12px; border-bottom: 1px solid var(--line);
+  font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
+}
+.pane-head .hint { text-transform: none; letter-spacing: 0; font-size: 12px; white-space: nowrap; }
+.pane-head .btn { text-transform: none; letter-spacing: 0; }
+
+/* editor header: folder button + file tabs */
+.ed-head { padding-left: 6px; gap: 2px; }
+.icon-btn {
+  position: relative; display: inline-grid; place-items: center;
+  width: 30px; height: 30px; border: 0; border-radius: 6px; background: none; color: var(--muted); cursor: pointer; flex: none;
+}
+.icon-btn:hover, .icon-btn[aria-expanded="true"] { background: var(--panel); color: var(--fg); }
+.icon-btn .dot { position: absolute; top: 5px; right: 4px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+#tabs { display: flex; min-width: 0; overflow-x: auto; scrollbar-width: none; align-self: stretch; }
+#tabs::-webkit-scrollbar { display: none; }
+.tab {
+  border: 0; background: none; cursor: pointer; white-space: nowrap;
+  font: 13px/1 var(--mono); text-transform: none; letter-spacing: 0; color: var(--muted);
+  padding: 0 10px; border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.tab:hover { color: var(--fg); }
+.tab.active { color: var(--fg); border-bottom-color: var(--accent); }
+.tab-input { font: 13px var(--mono); width: 12em; border: 1px solid var(--accent); border-radius: 4px; padding: 3px 6px; background: var(--bg); align-self: center; }
+
+.ed-body { flex: 1; min-height: 0; display: flex; position: relative; }
+
+/* explorer */
+#explorer {
+  width: 220px; flex: none; border-right: 1px solid var(--line); background: var(--panel);
+  display: flex; flex-direction: column; min-height: 0;
+}
+.ex-head { display: flex; align-items: center; gap: 6px; padding: 8px 10px; }
+.ex-head .title { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+#fileList { list-style: none; margin: 0; padding: 0 0 8px; overflow-y: auto; flex: 1; min-height: 0; }
+.file-row {
+  display: flex; align-items: center; gap: 4px; padding: 0 6px 0 12px; min-height: 32px;
+  cursor: pointer; font: 13px var(--mono);
+}
+.file-row:hover { background: color-mix(in srgb, var(--fg) 5%, transparent); }
+.file-row.active { background: var(--sel); }
+.file-row .fname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-row .fsize { color: var(--muted); font: 11px var(--ui); }
+.row-btn {
+  border: 0; background: none; cursor: pointer; color: var(--muted); width: 26px; height: 26px; border-radius: 4px;
+  font-size: 13px; line-height: 1; opacity: 0;
+}
+.file-row:hover .row-btn, .file-row:focus-within .row-btn, .file-row.active .row-btn { opacity: 1; }
+.row-btn:hover { background: var(--bg); color: var(--fg); }
+.row-btn:focus-visible { opacity: 1; outline: 2px solid var(--accent); }
+.file-row input { flex: 1; min-width: 0; font: 13px var(--mono); border: 1px solid var(--accent); border-radius: 4px; padding: 3px 6px; background: var(--bg); }
+.confirm { display: flex; align-items: center; gap: 6px; flex: 1; font: 12px var(--ui); }
+.confirm span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ex-foot { border-top: 1px solid var(--line); padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+
+#editorWrap { flex: 1; min-width: 0; min-height: 0; position: relative; }
+#binView {
+  position: absolute; inset: 0; z-index: 3; background: var(--bg);
+  display: grid; place-content: center; text-align: center; gap: 6px; padding: 24px; color: var(--muted);
+}
+#binView b { color: var(--fg); font: 600 14px var(--mono); }
+#binView code { font-family: var(--mono); color: var(--fg); background: var(--panel); padding: 2px 6px; border-radius: 4px; }
+#dropHint {
+  position: fixed; inset: 0; z-index: 40; display: grid; place-content: center;
+  background: color-mix(in srgb, var(--accent) 12%, transparent); border: 3px dashed var(--accent);
+  font-size: 18px; font-weight: 600; color: var(--accent); pointer-events: none;
+}
+
+/* CodeMirror theme */
+.CodeMirror {
+  height: 100%; background: var(--bg); color: var(--fg);
+  font-family: var(--mono); font-size: 14px; line-height: 1.55;
+}
+.CodeMirror-gutters { background: var(--bg); border-right: 1px solid var(--line); }
+.CodeMirror-linenumber { color: var(--muted); padding: 0 6px 0 4px; cursor: pointer; }
+.CodeMirror-cursor { border-left: 2px solid var(--accent); }
+.CodeMirror-selected, .CodeMirror-focused .CodeMirror-selected { background: var(--sel); }
+.CodeMirror-line::selection, .CodeMirror-line > span::selection, .CodeMirror-line > span > span::selection { background: var(--sel); }
+.CodeMirror-matchingbracket { color: inherit !important; outline: 1px solid var(--muted); }
+.cm-s-py .cm-keyword { color: var(--s-kw); font-weight: 600; }
+.cm-s-py .cm-string, .cm-s-py .cm-string-2 { color: var(--s-str); }
+.cm-s-py .cm-number { color: var(--s-num); }
+.cm-s-py .cm-comment { color: var(--s-com); font-style: italic; }
+.cm-s-py .cm-def { color: var(--s-def); font-weight: 600; }
+.cm-s-py .cm-builtin { color: var(--s-builtin); }
+.cm-s-py .cm-variable-2, .cm-s-py .cm-property, .cm-s-py .cm-operator { color: var(--fg); }
+.cm-s-py .cm-meta { color: var(--s-num); }
+.cm-s-py .cm-error { color: var(--err); text-decoration: underline wavy; }
+.bp-gutter { width: 14px; cursor: pointer; }
+.bp-dot { color: var(--bp); font-size: 12px; line-height: inherit; padding-left: 3px; }
+.dbg-line { background: var(--hl); }
+.err-line { background: color-mix(in srgb, var(--err) 14%, transparent); }
+
+/* output */
+#outWrap { flex: 1; min-height: 0; overflow: auto; }
+.term {
+  margin: 0; padding: 12px;
+  font-family: var(--mono); font-size: 13px; line-height: 1.5;
+  white-space: pre-wrap; word-break: break-word;
+}
+#output { min-height: 100%; }
+.term .err { color: var(--err); }
+.term .in { color: var(--accent); font-weight: 600; }
+.term .note { color: var(--muted); font-style: italic; font-family: var(--ui); }
+.in-field {
+  font: inherit; font-weight: 600; color: var(--accent);
+  border: 0; border-bottom: 1px dashed var(--accent); background: transparent;
+  padding: 0; margin: 0; outline: none; min-width: 6ch; width: 60%; border-radius: 0;
+}
+.in-field:focus { border-bottom-style: solid; }
+
+/* debugger */
+#debug { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.dbg-controls {
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--panel);
+}
+.dbg-controls .btn { padding: 5px 10px; font-size: 13px; }
+#stepInfo { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; margin-left: auto; }
+#scrub { width: 100%; margin: 0; accent-color: var(--accent); }
+.scrub-row { padding: 6px 12px; border-bottom: 1px solid var(--line); }
+.dbg-body { flex: 1; min-height: 0; overflow: auto; }
+.dbg-section { border-bottom: 1px solid var(--line); }
+.dbg-section:last-child { border-bottom: 0; }
+.dbg-section h3 {
+  margin: 0; padding: 8px 12px 4px;
+  font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600;
+}
+#eventLine, #stack { padding: 0 12px 8px; font-family: var(--mono); font-size: 13px; word-break: break-word; }
+#eventLine .ret { color: var(--ok); font-weight: 600; }
+#eventLine .exc { color: var(--err); font-weight: 600; }
+#eventLine .wait { color: var(--accent); font-weight: 600; }
+.vars-scroll { overflow-x: auto; padding: 0 12px 8px; }
+table.vars { border-collapse: collapse; font-family: var(--mono); font-size: 13px; width: 100%; }
+table.vars td { padding: 3px 8px 3px 0; vertical-align: top; border-top: 1px solid var(--line); }
+table.vars tr:first-child td { border-top: 0; }
+table.vars td.name { font-weight: 600; white-space: nowrap; }
+table.vars td.type { color: var(--muted); white-space: nowrap; font-size: 12px; }
+table.vars td.val { word-break: break-word; }
+table.vars tr.changed td.val { background: var(--hl); }
+.empty { color: var(--muted); font-style: italic; font-family: var(--ui); }
+#dbgOut { padding-top: 0; }
+
+/* share sheet */
+#shareSheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  background: var(--bg); border-top: 1px solid var(--line);
+  box-shadow: 0 -8px 24px rgba(0,0,0,.08);
+  padding: 14px max(16px, env(safe-area-inset-right, 0px)) calc(14px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  display: flex; flex-direction: column; gap: 8px;
+}
+.share-row { display: flex; gap: 8px; }
+#shareUrl {
+  flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px;
+  font-family: var(--mono); font-size: 12px; background: var(--panel);
+}
+#copyBtn { min-width: 5.5em; }
+#shareMeta { font-size: 12px; color: var(--muted); }
+
+#toast {
+  position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 6px; font-size: 13px;
+  z-index: 30; pointer-events: none; max-width: calc(100% - 32px);
+}
+
+.view-tabs { display: none; }
+@media (max-width: 760px) {
+  .view-tabs {
+    display: flex; border-bottom: 1px solid var(--line);
+    padding: 0 max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px));
+  }
+  .view-tab {
+    flex: 1; border: 0; background: none; cursor: pointer; padding: 10px 0 9px; font-weight: 600; color: var(--muted);
+    border-bottom: 2px solid transparent; margin-bottom: -1px; position: relative;
+  }
+  .view-tab.active { color: var(--fg); border-bottom-color: var(--accent); }
+  .view-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .vdot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-left: 6px; vertical-align: 2px; }
+  main { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+  main[data-view="code"] .out-pane, main[data-view="output"] .code-pane { display: none; }
+  .pane + .pane { border-left: 0; }
+  .brand, .pane-head .hint { display: none; }
+  header { gap: 6px; }
+  .btn { padding: 6px 10px; }
+  .CodeMirror { font-size: 13px; }
+  #explorer { position: absolute; inset: 0; z-index: 5; width: auto; border-right: 0; }
+  .row-btn { opacity: 1; }
+  .file-row { min-height: 40px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="brand">Python</span>
+  <button class="btn primary" id="runBtn" title="Run (Ctrl/Cmd + Enter)">▶ Run</button>
+  <button class="btn" id="debugBtn" title="Step through line by line">Debug</button>
+  <span class="spacer"></span>
+  <button class="btn" id="shareBtn">Share</button>
+  <button class="btn" id="downloadBtn" title="Download this file">Download</button>
+</header>
+
+<nav class="view-tabs" id="viewTabs" aria-label="View">
+  <button class="view-tab active" id="viewCode" aria-pressed="true">Code</button>
+  <button class="view-tab" id="viewOut" aria-pressed="false"><span id="viewOutLabel">Output</span><span class="vdot" id="outDot" hidden></span></button>
+</nav>
+
+<main id="main" data-view="code">
+  <section class="pane code-pane">
+    <div class="pane-head ed-head">
+      <button class="icon-btn" id="filesBtn" aria-label="Files" aria-expanded="false" aria-controls="explorer" title="Files">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4.6l2 2.2h8.4A1.5 1.5 0 0 1 21 8.7v9.8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/></svg>
+        <span class="dot" id="filesDot" hidden></span>
+      </button>
+      <div id="tabs" role="tablist" aria-label="Open files"></div>
+      <span class="spacer"></span>
+      <span class="hint">Click line numbers for breakpoints</span>
+    </div>
+    <div class="ed-body">
+      <aside id="explorer" hidden aria-label="Files">
+        <div class="ex-head">
+          <span class="title">Files</span>
+          <span class="spacer"></span>
+          <button class="btn small" id="newFileBtn">New</button>
+          <button class="btn small" id="uploadBtn">Upload</button>
+        </div>
+        <ul id="fileList"></ul>
+        <div class="ex-foot">
+          <button class="btn small" id="zipBtn">Download all (.zip)</button>
+        </div>
+        <input type="file" id="fileInput" multiple hidden>
+      </aside>
+      <div id="editorWrap">
+        <textarea id="code"></textarea>
+        <div id="binView" hidden></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="pane out-pane">
+    <div class="pane-head">
+      <span id="rightTitle">Output</span>
+      <span class="spacer"></span>
+      <span class="status-wrap"><span id="status">Loading Python</span><button class="linkish" id="restoreBtn" hidden>Restore previous code</button></span>
+      <button class="btn small" id="clearBtn">Clear</button>
+      <button class="btn small" id="exitDbgBtn" hidden>Exit debugger</button>
+    </div>
+
+    <div id="outWrap"><pre class="term" id="output"><span class="note">Press Run to start</span></pre></div>
+
+    <div id="debug" hidden>
+      <div class="dbg-controls">
+        <button class="btn" id="dbgRestart" title="First step">⏮</button>
+        <button class="btn" id="dbgBack" title="Step back (←)">◀ Back</button>
+        <button class="btn primary" id="dbgStep" title="Step forward (→)">Step ▶</button>
+        <button class="btn" id="dbgCont" title="Run to next breakpoint (F8)">Continue ⏭</button>
+        <span id="stepInfo"></span>
+      </div>
+      <div class="scrub-row"><input type="range" id="scrub" min="0" max="0" value="0" aria-label="Step"></div>
+      <div class="dbg-body" id="dbgBody">
+        <div class="dbg-section"><h3>Next</h3><div id="eventLine"></div></div>
+        <div class="dbg-section"><h3>Call stack</h3><div id="stack"></div></div>
+        <div class="dbg-section"><h3>Variables</h3><div class="vars-scroll"><table class="vars" id="vars"></table></div></div>
+        <div class="dbg-section"><h3>Output so far</h3><pre class="term" id="dbgOut"></pre></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="shareSheet" hidden>
+  <div class="share-row">
+    <input id="shareUrl" readonly aria-label="Share link">
+    <button class="btn primary" id="copyBtn">Copy</button>
+    <button class="btn" id="closeShareBtn">Close</button>
+  </div>
+  <div id="shareMeta" hidden></div>
+</div>
+<div id="toast" hidden></div>
+<div id="dropHint" hidden>Drop files to add them</div>
+
+<!-- Python helpers that run inside the worker -->
+<script type="text/x-python" id="pySrc">
+import sys, io, os, json, types, traceback, builtins, random, importlib
+
+ROOT = '/project'
+os.makedirs(ROOT, exist_ok=True)
+sys.dont_write_bytecode = True
+
+def _isuser(fn): return isinstance(fn, str) and fn.startswith(ROOT + '/')
+def _rel(fn): return fn[len(ROOT) + 1:] if _isuser(fn) else fn
+
+class _NeedInput(BaseException): pass
+class _Limit(BaseException): pass
+
+_sess = None
+
+class _Out:
+    def __init__(s, emit, kind):
+        s.emit = emit; s.kind = kind
+    def write(s, t):
+        t = str(t)
+        if t and not (_sess and _sess.waiting is not None): s.emit(s.kind, t)
+        return len(t)
+    def flush(s): pass
+    def isatty(s): return False
+
+class _Session:
+    def __init__(s, inputs, emit):
+        s.inputs = list(inputs); s.emit = emit; s.waiting = None; s.tracing = False
+    def input(s, prompt=''):
+        if s.waiting is not None:
+            raise _NeedInput()
+        prompt = str(prompt)
+        if prompt:
+            sys.stdout.write(prompt)
+        if s.inputs:
+            v = s.inputs.pop(0)
+            s.emit('in', v + '\n')
+            return v
+        s.waiting = prompt
+        s.halt()
+        raise _NeedInput()
+    def halt(s):
+        # Make the pause impossible to swallow: if user code catches it
+        # (bare except / finally), its next line raises it again.
+        if s.tracing: return
+        def killer(frame, event, arg):
+            if event == 'line' and _isuser(frame.f_code.co_filename):
+                raise _NeedInput()
+            return killer
+        f = sys._getframe(1)
+        while f is not None:
+            f.f_trace = killer; f.f_trace_lines = True
+            f = f.f_back
+        sys.settrace(killer)
+
+class _Stdin:
+    def __init__(s, sess): s.sess = sess
+    def readline(s, *a): return s.sess.input('') + '\n'
+    def read(s, *a): return s.readline()
+    def isatty(s): return False
+    def __iter__(s): return s
+    def __next__(s): return s.readline()
+
+import time as _time
+_real_sleep = _time.sleep
+_emit_now = None
+def _sleep(secs):
+    if _emit_now is not None: _emit_now('flush', '')
+    _real_sleep(secs)
+_time.sleep = _sleep
+
+def _begin(entry, inputs, emit, seed):
+    global _sess
+    os.chdir(ROOT)
+    if ROOT not in sys.path: sys.path.insert(0, ROOT)
+    for name, mod in list(sys.modules.items()):
+        if _isuser(getattr(mod, '__file__', None) or ''):
+            del sys.modules[name]
+    importlib.invalidate_caches()
+    sys.argv = [entry]
+    sess = _sess = _Session(json.loads(inputs), emit)
+    builtins.input = sess.input
+    sys.stdin = _Stdin(sess)
+    random.seed(seed)
+    return sess
+
+def _load(entry):
+    path = ROOT + '/' + entry
+    with open(path, encoding='utf-8') as f:
+        src = f.read()
+    return compile(src, path, 'exec'), {'__name__': '__main__', '__file__': path, '__builtins__': builtins}
+
+def _exc_info(e):
+    tb = e.__traceback__
+    while tb is not None and not _isuser(tb.tb_frame.f_code.co_filename):
+        tb = tb.tb_next
+    text = ''.join(traceback.format_exception(type(e), e, tb)).replace('File "' + ROOT + '/', 'File "')
+    loc = None
+    if isinstance(e, SyntaxError) and _isuser(e.filename):
+        loc = [_rel(e.filename), e.lineno]
+    t = tb
+    while t is not None:
+        if _isuser(t.tb_frame.f_code.co_filename):
+            loc = [_rel(t.tb_frame.f_code.co_filename), t.tb_lineno]
+        t = t.tb_next
+    return text, loc
+
+def _exit_msg(ex):
+    if ex.code is None or ex.code == 0 or isinstance(ex.code, int): return None
+    return str(ex.code) + '\n'
+
+def _run(entry, inputs, emit, seed):
+    global _emit_now
+    _emit_now = emit
+    sess = _begin(entry, inputs, emit, seed)
+    o, e = sys.stdout, sys.stderr
+    sys.stdout = _Out(emit, 'out'); sys.stderr = _Out(emit, 'err')
+    res = {'err': None, 'loc': None, 'need': None}
+    try:
+        code, g = _load(entry)
+        exec(code, g)
+    except _NeedInput:
+        pass
+    except SystemExit as ex:
+        res['err'] = _exit_msg(ex)
+    except BaseException as ex:
+        if sess.waiting is None:
+            res['err'], res['loc'] = _exc_info(ex)
+    finally:
+        sys.settrace(None)
+        sys.stdout, sys.stderr = o, e
+        _emit_now = None
+    if sess.waiting is not None:
+        res = {'err': None, 'loc': None, 'need': sess.waiting}
+    return json.dumps(res)
+
+def _safe(v):
+    if isinstance(v, types.FunctionType): return '<function %s>' % v.__name__
+    if isinstance(v, type): return '<class %s>' % v.__name__
+    try: r = repr(v)
+    except Exception: r = '<unprintable>'
+    return r if len(r) <= 160 else r[:157] + '...'
+
+def _trace(entry, inputs, seed, limit):
+    buf = io.StringIO()
+    steps = []
+    sess = _begin(entry, inputs, lambda k, t: buf.write(t) if sess.waiting is None else None, seed)
+    sess.tracing = True
+    def snap(frame):
+        res = []
+        for k, v in list(frame.f_locals.items()):
+            if k.startswith('__') and k.endswith('__'): continue
+            if isinstance(v, types.ModuleType): continue
+            res.append([k, type(v).__name__, _safe(v)])
+        return res
+    def stack(frame):
+        s = []
+        f = frame
+        while f is not None and _isuser(f.f_code.co_filename):
+            n = f.f_code.co_name
+            rel = _rel(f.f_code.co_filename)
+            if n == '<module>': label = '<module>' if rel == entry else '<module %s>' % rel
+            elif n.startswith('<'): label = n
+            else: label = n + '()' + ('' if rel == entry else '  · ' + rel)
+            s.append(label)
+            f = f.f_back
+        return s[::-1]
+    def local(frame, event, arg):
+        if sess.waiting is not None:
+            if event == 'line': raise _NeedInput()
+            return local
+        if event == 'exception' and issubclass(arg[0], (_NeedInput, _Limit)):
+            return local
+        if event in ('line', 'return', 'exception'):
+            if len(steps) >= limit: raise _Limit()
+            st = {'f': _rel(frame.f_code.co_filename), 'l': frame.f_lineno, 'ev': event,
+                  'stack': stack(frame), 'vars': snap(frame), 'o': buf.tell()}
+            if event == 'return': st['ret'] = _safe(arg)
+            if event == 'exception': st['exc'] = arg[0].__name__ + ': ' + _safe(arg[1])[:120]
+            steps.append(st)
+        return local
+    def glob(frame, event, arg):
+        return local if _isuser(frame.f_code.co_filename) else None
+    o, e = sys.stdout, sys.stderr
+    sys.stdout = sys.stderr = buf
+    err = None; loc = None; limited = False
+    try:
+        code, g = _load(entry)
+        sys.settrace(glob)
+        exec(code, g)
+    except _NeedInput:
+        pass
+    except _Limit:
+        limited = True
+    except SystemExit as ex:
+        err = _exit_msg(ex)
+    except BaseException as ex:
+        if sess.waiting is None:
+            err, loc = _exc_info(ex)
+    finally:
+        sys.settrace(None)
+        sys.stdout, sys.stderr = o, e
+    need = sess.waiting
+    if need is not None: err = None; loc = None
+    return json.dumps({'steps': steps, 'out': buf.getvalue(), 'err': err, 'loc': loc,
+                       'limited': limited, 'need': need})
+</script>
+
+<!-- Web worker: loads Pyodide and runs code off the main thread -->
+<script type="text/x-worker" id="workerSrc">
+let py, runFn, traceFn, buf = [], winStart = 0, winCount = 0;
+const ROOT = '/project';
+// Output is sent to the page right away, but batched when a program prints very fast.
+function flush() { if (buf.length) { postMessage({ t: 'out', chunks: buf }); buf = []; } }
+function emit(kind, text) {
+  if (kind === 'flush') { flush(); return; }
+  buf.push([kind, text]);
+  const now = performance.now();
+  if (now - winStart > 50) { winStart = now; winCount = 0; }
+  if (++winCount <= 20 || buf.length > 500) flush();
+}
+function rmrf(dir) {
+  for (const n of py.FS.readdir(dir)) {
+    if (n === '.' || n === '..') continue;
+    const p = dir + '/' + n;
+    if (py.FS.isDir(py.FS.stat(p).mode)) { rmrf(p); py.FS.rmdir(p); } else py.FS.unlink(p);
+  }
+}
+function writeFiles(files) {
+  rmrf(ROOT);
+  for (const f of files) {
+    const parts = f.name.split('/');
+    let d = ROOT;
+    for (const s of parts.slice(0, -1)) { d += '/' + s; try { py.FS.mkdir(d); } catch (e) {} }
+    py.FS.writeFile(ROOT + '/' + f.name, f.data);
+  }
+}
+function readAll(dir = ROOT, pre = '', out = []) {
+  for (const n of py.FS.readdir(dir)) {
+    if (n === '.' || n === '..' || n === '__pycache__') continue;
+    const p = dir + '/' + n;
+    if (py.FS.isDir(py.FS.stat(p).mode)) readAll(p, pre + n + '/', out);
+    else out.push({ name: pre + n, data: py.FS.readFile(p) });
+  }
+  return out;
+}
+function changedFiles(sent) {
+  const before = new Map(sent.map(f => [f.name, f.data]));
+  const res = [];
+  for (const f of readAll()) {
+    if (f.data.length > 5e6) continue;
+    const old = before.get(f.name);
+    if (old && old.length === f.data.length && old.every((b, i) => b === f.data[i])) continue;
+    res.push(f);
+  }
+  return res;
+}
+async function packages(files) {
+  const src = files.filter(f => f.name.endsWith('.py')).map(f => new TextDecoder().decode(f.data)).join('\n');
+  try {
+    await py.loadPackagesFromImports(src, {
+      messageCallback: m => { if (/^Loading/.test(m)) postMessage({ t: 'status', msg: m }); },
+      errorCallback: () => {}
+    });
+  } catch (e) {}
+}
+self.onmessage = async (e) => {
+  const m = e.data;
+  if (m.t === 'init') {
+    try {
+      importScripts(m.base + 'pyodide.js');
+      py = await loadPyodide({ indexURL: m.base });
+      py.runPython(m.py);
+      runFn = py.globals.get('_run'); traceFn = py.globals.get('_trace');
+      postMessage({ t: 'ready', version: py.runPython('import sys; sys.version.split()[0]') });
+    } catch (err) { postMessage({ t: 'fatal', msg: String(err) }); }
+    return;
+  }
+  if (m.t === 'run' || m.t === 'trace') {
+    await packages(m.files);
+    writeFiles(m.files);
+    postMessage({ t: 'started', id: m.id });
+    winStart = 0; winCount = 0;
+    if (m.t === 'run') {
+      let res;
+      try { res = JSON.parse(runFn(m.entry, JSON.stringify(m.inputs), emit, m.seed)); }
+      catch (err) { res = { err: String(err), loc: null, need: null }; }
+      flush();
+      let changed = [];
+      try { if (res.need == null) changed = changedFiles(m.files); } catch (err) {}
+      postMessage({ t: 'done', id: m.id, res, changed });
+    } else {
+      let res;
+      try { res = JSON.parse(traceFn(m.entry, JSON.stringify(m.inputs), m.seed, m.limit)); }
+      catch (err) { res = { steps: [], out: '', err: String(err), loc: null, limited: false, need: null }; }
+      postMessage({ t: 'traced', id: m.id, res });
+    }
+  }
+};
+</script>
+
+<!-- Sample Python used to prime the link compressor. FROZEN: editing it breaks existing share links. -->
+<script type="application/json" id="linkPrimer">"# Simple calculator\ndef add(a, b):\n    return a + b\n\ndef subtract(a, b):\n    return a - b\n\ndef multiply(a, b):\n    return a * b\n\ndef divide(a, b):\n    if b == 0:\n        return \"Error: division by zero\"\n    return a / b\n\nprint(\"Select operation:\")\nprint(\"1. Add\")\nprint(\"2. Subtract\")\nprint(\"3. Multiply\")\nprint(\"4. Divide\")\n\nwhile True:\n    choice = input(\"Enter choice (1/2/3/4): \")\n    if choice in (\"1\", \"2\", \"3\", \"4\"):\n        try:\n            num1 = float(input(\"Enter first number: \"))\n            num2 = float(input(\"Enter second number: \"))\n        except ValueError:\n            print(\"Invalid input. Please enter a number.\")\n            continue\n        if choice == \"1\":\n            print(num1, \"+\", num2, \"=\", add(num1, num2))\n        elif choice == \"2\":\n            print(num1, \"-\", num2, \"=\", subtract(num1, num2))\n        elif choice == \"3\":\n            print(num1, \"*\", num2, \"=\", multiply(num1, num2))\n        elif choice == \"4\":\n            print(num1, \"/\", num2, \"=\", divide(num1, num2))\n        again = input(\"Let's do another calculation? (yes/no): \")\n        if again.lower() == \"no\":\n            break\n    else:\n        print(\"Invalid Input\")\n\nimport random\n\nchoices = [\"rock\", \"paper\", \"scissors\"]\nscore = {\"player\": 0, \"computer\": 0, \"ties\": 0}\n\ndef winner(player, computer):\n    if player == computer:\n        return \"tie\"\n    if (player == \"rock\" and computer == \"scissors\") or \\\n       (player == \"paper\" and computer == \"rock\") or \\\n       (player == \"scissors\" and computer == \"paper\"):\n        return \"player\"\n    return \"computer\"\n\nfor round_num in range(1, 4):\n    player = input(f\"Round {round_num} - rock, paper or scissors? \").lower().strip()\n    if player not in choices:\n        print(\"That's not a valid choice.\")\n        continue\n    computer = random.choice(choices)\n    print(f\"Computer chose {computer}\")\n    result = winner(player, computer)\n    if result == \"tie\":\n        score[\"ties\"] += 1\n        print(\"It's a tie!\")\n    else:\n        score[result] += 1\n        print(f\"{result.capitalize()} wins this round!\")\n\nprint(f\"Final score: {score}\")\n\ndef factorial(n):\n    if n == 0 or n == 1:\n        return 1\n    return n * factorial(n - 1)\n\n\ndef fibonacci(n):\n    if n <= 1:\n        return n\n    return fibonacci(n - 1) + fibonacci(n - 2)\n\n\ndef gcd(a, b):\n    while b:\n        a, b = b, a % b\n    return a\n\n\ndef is_palindrome(s):\n    s = \"\".join(ch.lower() for ch in s if ch.isalnum())\n    return s == s[::-1]\n\n\ndef reverse_string(s):\n    return s[::-1]\n\n\ndef count_vowels(text):\n    vowels = \"aeiouAEIOU\"\n    count = 0\n    for char in text:\n        if char in vowels:\n            count += 1\n    return count\n\n\ndef sum_of_digits(n):\n    total = 0\n    while n > 0:\n        total += n % 10\n        n //= 10\n    return total\n\n\ndef is_armstrong(num):\n    digits = str(num)\n    power = len(digits)\n    return num == sum(int(d) ** power for d in digits)\n\n\nfor i in range(10):\n    print(i, factorial(i), fibonacci(i))\n\nprint(gcd(48, 18))\nprint(is_palindrome(\"A man, a plan, a canal: Panama\"))\nprint(reverse_string(\"hello world\"))\nprint(count_vowels(\"The quick brown fox jumps over the lazy dog\"))\nprint(sum_of_digits(12345))\nprint([n for n in range(1, 1000) if is_armstrong(n)])\n\nclass Student:\n    school = \"Lincoln High\"\n\n    def __init__(self, name, grade, scores=None):\n        self.name = name\n        self.grade = grade\n        self.scores = scores if scores is not None else []\n\n    def add_score(self, score):\n        if not 0 <= score <= 100:\n            raise ValueError(\"Score must be between 0 and 100\")\n        self.scores.append(score)\n\n    def average(self):\n        if not self.scores:\n            return 0\n        return sum(self.scores) / len(self.scores)\n\n    def letter_grade(self):\n        avg = self.average()\n        if avg >= 90:\n            return \"A\"\n        elif avg >= 80:\n            return \"B\"\n        elif avg >= 70:\n            return \"C\"\n        elif avg >= 60:\n            return \"D\"\n        else:\n            return \"F\"\n\n    def __repr__(self):\n        return f\"Student(name={self.name!r}, grade={self.grade})\"\n\n    def __str__(self):\n        return f\"{self.name} ({self.grade}th grade): {self.average():.1f} {self.letter_grade()}\"\n\n\nclass Classroom:\n    def __init__(self, teacher):\n        self.teacher = teacher\n        self.students = []\n\n    def enroll(self, student):\n        self.students.append(student)\n\n    def top_student(self):\n        return max(self.students, key=lambda s: s.average())\n\n    def __len__(self):\n        return len(self.students)\n\n    def __iter__(self):\n        return iter(self.students)\n\n\nroom = Classroom(\"Ms. Smith\")\nroom.enroll(Student(\"Alice\", 10, [92, 88, 95]))\nroom.enroll(Student(\"Bob\", 11, [75, 64, 80]))\nroom.enroll(Student(\"Charlie\", 10, [58, 71, 66]))\n\nfor student in room:\n    print(student)\n\nprint(\"Top student:\", room.top_student().name)\nprint(\"Class size:\", len(room))\n\nfrom dataclasses import dataclass, field\nfrom typing import List, Optional\n\n\n@dataclass\nclass Item:\n    name: str\n    price: float\n    quantity: int = 1\n\n    @property\n    def total(self) -> float:\n        return self.price * self.quantity\n\n\n@dataclass\nclass Cart:\n    items: List[Item] = field(default_factory=list)\n    discount: Optional[float] = None\n\n    def add(self, item: Item) -> None:\n        for existing in self.items:\n            if existing.name == item.name:\n                existing.quantity += item.quantity\n                return\n        self.items.append(item)\n\n    def remove(self, name: str) -> bool:\n        for i, item in enumerate(self.items):\n            if item.name == name:\n                del self.items[i]\n                return True\n        return False\n\n    def subtotal(self) -> float:\n        return sum(item.total for item in self.items)\n\n    def total(self) -> float:\n        sub = self.subtotal()\n        if self.discount:\n            sub *= 1 - self.discount\n        return round(sub, 2)\n\n\ncart = Cart()\ncart.add(Item(\"apple\", 0.5, 6))\ncart.add(Item(\"bread\", 2.25))\ncart.add(Item(\"milk\", 1.99, 2))\ncart.add(Item(\"apple\", 0.5, 4))\ncart.discount = 0.1\nfor item in cart.items:\n    print(f\"{item.name:<10}{item.quantity:>3} x ${item.price:.2f} = ${item.total:.2f}\")\nprint(f\"Total: ${cart.total():.2f}\")\n\nimport json\nimport csv\nimport os\n\ndata = {\n    \"name\": \"John\",\n    \"age\": 30,\n    \"city\": \"New York\",\n    \"hobbies\": [\"reading\", \"chess\", \"hiking\"],\n    \"married\": False,\n}\n\nwith open(\"data.json\", \"w\") as f:\n    json.dump(data, f, indent=4)\n\nwith open(\"data.json\", \"r\") as f:\n    loaded = json.load(f)\n    print(loaded[\"name\"], loaded[\"hobbies\"])\n\nrows = [\n    [\"name\", \"department\", \"salary\"],\n    [\"Alice\", \"Engineering\", 85000],\n    [\"Bob\", \"Marketing\", 62000],\n    [\"Carol\", \"Engineering\", 91000],\n]\n\nwith open(\"employees.csv\", \"w\", newline=\"\") as f:\n    writer = csv.writer(f)\n    writer.writerows(rows)\n\nwith open(\"employees.csv\", newline=\"\") as f:\n    reader = csv.DictReader(f)\n    for row in reader:\n        print(row[\"name\"], row[\"department\"], int(row[\"salary\"]))\n\nif os.path.exists(\"notes.txt\"):\n    with open(\"notes.txt\") as f:\n        for line_number, line in enumerate(f, start=1):\n            print(f\"{line_number}: {line.rstrip()}\")\nelse:\n    print(\"notes.txt not found\")\n\nwith open(\"log.txt\", \"a\") as f:\n    f.write(\"Program ran successfully\\n\")\n\nprint(os.listdir(\".\"))\n\ndef bubble_sort(arr):\n    n = len(arr)\n    for i in range(n - 1):\n        for j in range(n - i - 1):\n            if arr[j] > arr[j + 1]:\n                arr[j], arr[j + 1] = arr[j + 1], arr[j]\n    return arr\n\n\ndef selection_sort(arr):\n    for i in range(len(arr)):\n        min_idx = i\n        for j in range(i + 1, len(arr)):\n            if arr[j] < arr[min_idx]:\n                min_idx = j\n        arr[i], arr[min_idx] = arr[min_idx], arr[i]\n    return arr\n\n\ndef insertion_sort(arr):\n    for i in range(1, len(arr)):\n        key = arr[i]\n        j = i - 1\n        while j >= 0 and arr[j] > key:\n            arr[j + 1] = arr[j]\n            j -= 1\n        arr[j + 1] = key\n    return arr\n\n\ndef merge_sort(arr):\n    if len(arr) <= 1:\n        return arr\n    mid = len(arr) // 2\n    left = merge_sort(arr[:mid])\n    right = merge_sort(arr[mid:])\n    result = []\n    i = j = 0\n    while i < len(left) and j < len(right):\n        if left[i] <= right[j]:\n            result.append(left[i])\n            i += 1\n        else:\n            result.append(right[j])\n            j += 1\n    result.extend(left[i:])\n    result.extend(right[j:])\n    return result\n\n\ndef quick_sort(arr):\n    if len(arr) <= 1:\n        return arr\n    pivot = arr[len(arr) // 2]\n    left = [x for x in arr if x < pivot]\n    middle = [x for x in arr if x == pivot]\n    right = [x for x in arr if x > pivot]\n    return quick_sort(left) + middle + quick_sort(right)\n\n\ndef linear_search(arr, target):\n    for i, value in enumerate(arr):\n        if value == target:\n            return i\n    return -1\n\n\nnumbers = [38, 27, 43, 3, 9, 82, 10]\nprint(\"Bubble:\", bubble_sort(numbers.copy()))\nprint(\"Selection:\", selection_sort(numbers.copy()))\nprint(\"Insertion:\", insertion_sort(numbers.copy()))\nprint(\"Merge:\", merge_sort(numbers))\nprint(\"Quick:\", quick_sort(numbers))\nprint(\"Index of 43:\", linear_search(numbers, 43))\n\nfrom collections import deque, defaultdict\n\ngraph = {\n    \"A\": [\"B\", \"C\"],\n    \"B\": [\"A\", \"D\", \"E\"],\n    \"C\": [\"A\", \"F\"],\n    \"D\": [\"B\"],\n    \"E\": [\"B\", \"F\"],\n    \"F\": [\"C\", \"E\"],\n}\n\n\ndef bfs(graph, start):\n    visited = set([start])\n    queue = deque([start])\n    order = []\n    while queue:\n        node = queue.popleft()\n        order.append(node)\n        for neighbor in graph[node]:\n            if neighbor not in visited:\n                visited.add(neighbor)\n                queue.append(neighbor)\n    return order\n\n\ndef dfs(graph, node, visited=None):\n    if visited is None:\n        visited = set()\n    visited.add(node)\n    result = [node]\n    for neighbor in graph[node]:\n        if neighbor not in visited:\n            result.extend(dfs(graph, neighbor, visited))\n    return result\n\n\ndef shortest_path(graph, start, goal):\n    queue = deque([[start]])\n    seen = {start}\n    while queue:\n        path = queue.popleft()\n        node = path[-1]\n        if node == goal:\n            return path\n        for nxt in graph.get(node, []):\n            if nxt not in seen:\n                seen.add(nxt)\n                queue.append(path + [nxt])\n    return None\n\n\nprint(\"BFS:\", bfs(graph, \"A\"))\nprint(\"DFS:\", dfs(graph, \"A\"))\nprint(\"Path A->F:\", shortest_path(graph, \"A\", \"F\"))\n\nword_groups = defaultdict(list)\nfor word in [\"eat\", \"tea\", \"tan\", \"ate\", \"nat\", \"bat\"]:\n    word_groups[\"\".join(sorted(word))].append(word)\nprint(list(word_groups.values()))\n\n\nclass LinkedList:\n    class Node:\n        def __init__(self, data):\n            self.data = data\n            self.next = None\n\n    def __init__(self):\n        self.head = None\n        self.size = 0\n\n    def append(self, data):\n        node = self.Node(data)\n        if self.head is None:\n            self.head = node\n        else:\n            current = self.head\n            while current.next:\n                current = current.next\n            current.next = node\n        self.size += 1\n\n    def reverse(self):\n        prev = None\n        current = self.head\n        while current:\n            nxt = current.next\n            current.next = prev\n            prev = current\n            current = nxt\n        self.head = prev\n\n    def __iter__(self):\n        current = self.head\n        while current:\n            yield current.data\n            current = current.next\n\n\nll = LinkedList()\nfor x in [1, 2, 3, 4]:\n    ll.append(x)\nll.reverse()\nprint(list(ll))\n\nimport math\nimport time\nimport datetime\nimport string\nimport itertools\nimport functools\n\nprint(math.sqrt(16), math.pi, math.floor(3.7), math.ceil(3.2))\nprint(math.factorial(5), math.gcd(12, 18), math.log(100, 10))\nprint(round(3.14159, 2), abs(-5), pow(2, 10), max(3, 7, 1), min([4, 2, 8]))\n\nnow = datetime.datetime.now()\nprint(\"Current time:\", now.strftime(\"%Y-%m-%d %H:%M:%S\"))\nbirthday = datetime.date(2000, 5, 17)\ntoday = datetime.date.today()\nage = today.year - birthday.year - ((today.month, today.day) < (birthday.month, birthday.day))\nprint(\"Age:\", age)\nprint(\"In 30 days:\", today + datetime.timedelta(days=30))\n\nprint(string.ascii_lowercase, string.digits, string.punctuation)\nprint(list(itertools.permutations([1, 2, 3])))\nprint(list(itertools.combinations(\"ABCD\", 2)))\nprint(list(itertools.product([0, 1], repeat=3)))\n\n\n@functools.lru_cache(maxsize=None)\ndef fib(n):\n    return n if n < 2 else fib(n - 1) + fib(n - 2)\n\n\nstart = time.time()\nprint(fib(80))\nprint(f\"Took {time.time() - start:.4f} seconds\")\n\n\ndef timer(func):\n    @functools.wraps(func)\n    def wrapper(*args, **kwargs):\n        start = time.perf_counter()\n        result = func(*args, **kwargs)\n        end = time.perf_counter()\n        print(f\"{func.__name__} took {end - start:.6f}s\")\n        return result\n    return wrapper\n\n\n@timer\ndef slow_sum(n):\n    return sum(i * i for i in range(n))\n\n\nprint(slow_sum(100000))\n\n# Student grade manager\nstudents = {}\n\ndef add_student():\n    name = input(\"Student name: \").strip().title()\n    if name in students:\n        print(f\"{name} already exists.\")\n        return\n    students[name] = []\n    print(f\"Added {name}.\")\n\ndef add_grade():\n    name = input(\"Student name: \").strip().title()\n    if name not in students:\n        print(\"Student not found.\")\n        return\n    try:\n        grade = float(input(\"Grade: \"))\n    except ValueError:\n        print(\"Please enter a valid number.\")\n        return\n    students[name].append(grade)\n\ndef show_report():\n    if not students:\n        print(\"No students yet.\")\n        return\n    print(\"-\" * 30)\n    for name, grades in students.items():\n        if grades:\n            avg = sum(grades) / len(grades)\n            print(f\"{name:<15} {avg:6.2f}  {grades}\")\n        else:\n            print(f\"{name:<15}  no grades\")\n    print(\"-\" * 30)\n\nmenu = {\n    \"1\": (\"Add student\", add_student),\n    \"2\": (\"Add grade\", add_grade),\n    \"3\": (\"Show report\", show_report),\n}\n\nwhile True:\n    print(\"\\nMenu:\")\n    for key, (label, _) in menu.items():\n        print(f\"  {key}. {label}\")\n    print(\"  q. Quit\")\n    choice = input(\"Choose an option: \").strip().lower()\n    if choice == \"q\":\n        print(\"Goodbye!\")\n        break\n    elif choice in menu:\n        menu[choice][1]()\n    else:\n        print(\"Invalid option, try again.\")\n\nimport numpy as np\nimport pandas as pd\nimport matplotlib.pyplot as plt\n\narr = np.array([1, 2, 3, 4, 5])\nprint(arr * 2, arr.mean(), arr.std(), arr.sum())\nmatrix = np.zeros((3, 3))\nidentity = np.eye(3)\nrandom_matrix = np.random.rand(3, 3)\nprint(np.dot(identity, random_matrix).shape)\nx = np.linspace(0, 2 * np.pi, 100)\ny = np.sin(x)\n\ndf = pd.DataFrame({\n    \"name\": [\"Alice\", \"Bob\", \"Charlie\", \"David\"],\n    \"age\": [25, 32, 18, 47],\n    \"city\": [\"London\", \"Paris\", \"London\", \"Berlin\"],\n    \"score\": [88.5, 92.1, 79.3, 85.0],\n})\nprint(df.head())\nprint(df.describe())\nprint(df[df[\"age\"] > 20])\nprint(df.groupby(\"city\")[\"score\"].mean())\ndf[\"passed\"] = df[\"score\"] >= 80\ndf = df.sort_values(by=\"score\", ascending=False)\nprint(df.to_string(index=False))\n\nplt.plot(x, y, label=\"sin(x)\")\nplt.xlabel(\"x\")\nplt.ylabel(\"y\")\nplt.title(\"Sine wave\")\nplt.legend()\nplt.grid(True)\nplt.show()\n\nclass Animal:\n    def __init__(self, name, sound=\"...\"):\n        self.name = name\n        self.sound = sound\n\n    def speak(self):\n        return f\"{self.name} says {self.sound}\"\n\n\nclass Dog(Animal):\n    def __init__(self, name, breed):\n        super().__init__(name, \"Woof\")\n        self.breed = breed\n\n    def fetch(self):\n        return f\"{self.name} the {self.breed} fetches the ball!\"\n\n\nclass Cat(Animal):\n    def __init__(self, name):\n        super().__init__(name, \"Meow\")\n\n    def speak(self):\n        return super().speak() + \" (and ignores you)\"\n\n\npets = [Dog(\"Rex\", \"Labrador\"), Cat(\"Whiskers\"), Animal(\"Generic\")]\nfor pet in pets:\n    print(pet.speak())\n    if isinstance(pet, Dog):\n        print(pet.fetch())\n\n\nclass Temperature:\n    def __init__(self, celsius=0.0):\n        self._celsius = celsius\n\n    @property\n    def celsius(self):\n        return self._celsius\n\n    @celsius.setter\n    def celsius(self, value):\n        if value < -273.15:\n            raise ValueError(\"Temperature below absolute zero!\")\n        self._celsius = value\n\n    @property\n    def fahrenheit(self):\n        return self._celsius * 9 / 5 + 32\n\n    @classmethod\n    def from_fahrenheit(cls, f):\n        return cls((f - 32) * 5 / 9)\n\n    @staticmethod\n    def is_freezing(celsius):\n        return celsius <= 0\n\n\nt = Temperature.from_fahrenheit(212)\nprint(t.celsius, t.fahrenheit, Temperature.is_freezing(t.celsius))\n\n\nclass Vector:\n    def __init__(self, x, y):\n        self.x = x\n        self.y = y\n\n    def __add__(self, other):\n        return Vector(self.x + other.x, self.y + other.y)\n\n    def __mul__(self, scalar):\n        return Vector(self.x * scalar, self.y * scalar)\n\n    def __eq__(self, other):\n        return self.x == other.x and self.y == other.y\n\n    def __abs__(self):\n        return (self.x ** 2 + self.y ** 2) ** 0.5\n\n    def __repr__(self):\n        return f\"Vector({self.x}, {self.y})\"\n\n\nv = Vector(3, 4) + Vector(1, 2) * 2\nprint(v, abs(Vector(3, 4)))\n\n# Hangman\nimport random\n\nwords = [\"python\", \"programming\", \"computer\", \"keyboard\", \"developer\", \"function\"]\nword = random.choice(words)\nguessed = set()\nlives = 6\n\nwhile lives > 0:\n    display = \" \".join(letter if letter in guessed else \"_\" for letter in word)\n    print(f\"\\n{display}   lives: {lives}\")\n    if \"_\" not in display:\n        print(\"You won! The word was\", word)\n        break\n    guess = input(\"Guess a letter: \").lower()\n    if len(guess) != 1 or not guess.isalpha():\n        print(\"Please enter a single letter.\")\n        continue\n    if guess in guessed:\n        print(\"You already guessed that letter.\")\n        continue\n    guessed.add(guess)\n    if guess not in word:\n        lives -= 1\n        print(f\"Wrong! {guess} is not in the word.\")\nelse:\n    print(f\"Game over! The word was {word}.\")\n\n\n# Tic tac toe board\nboard = [[\" \" for _ in range(3)] for _ in range(3)]\n\ndef print_board(board):\n    for row in board:\n        print(\" | \".join(row))\n        print(\"-\" * 9)\n\ndef check_winner(board, player):\n    for i in range(3):\n        if all(board[i][j] == player for j in range(3)):\n            return True\n        if all(board[j][i] == player for j in range(3)):\n            return True\n    if all(board[i][i] == player for i in range(3)):\n        return True\n    if all(board[i][2 - i] == player for i in range(3)):\n        return True\n    return False\n\ncurrent = \"X\"\nfor turn in range(9):\n    print_board(board)\n    row, col = map(int, input(f\"Player {current}, enter row and column (0-2): \").split())\n    if board[row][col] != \" \":\n        print(\"That spot is taken!\")\n        continue\n    board[row][col] = current\n    if check_winner(board, current):\n        print_board(board)\n        print(f\"Player {current} wins!\")\n        break\n    current = \"O\" if current == \"X\" else \"X\"\nelse:\n    print(\"It's a draw!\")\n\n# list, dict and set comprehensions, generators, and common idioms\nsquares = [x ** 2 for x in range(10)]\nevens = [x for x in range(20) if x % 2 == 0]\npairs = [(x, y) for x in range(3) for y in range(3) if x != y]\nsquare_map = {x: x * x for x in range(5)}\nunique_lengths = {len(word) for word in [\"apple\", \"kiwi\", \"banana\", \"fig\"]}\nflattened = [item for sublist in [[1, 2], [3, 4], [5]] for item in sublist]\nprint(squares, evens, pairs, square_map, unique_lengths, flattened)\n\ndef countdown(n):\n    while n > 0:\n        yield n\n        n -= 1\n\nfor number in countdown(5):\n    print(number, end=\" \")\nprint()\n\ngen = (x * x for x in range(1000000))\nprint(sum(gen))\n\nnames = [\"alice\", \"bob\", \"carol\"]\nages = [30, 25, 35]\nfor name, age in zip(names, ages):\n    print(f\"{name.title()} is {age} years old\")\npeople = dict(zip(names, ages))\noldest = max(people, key=people.get)\nprint(sorted(people.items(), key=lambda item: item[1], reverse=True))\nprint(list(map(str.upper, names)))\nprint(list(filter(lambda a: a > 26, ages)))\nprint(any(age > 33 for age in ages), all(age > 18 for age in ages))\nfirst, *rest = [1, 2, 3, 4]\na, b = b, a = 1, 2\ntext = \"the quick brown fox jumps over the lazy dog\"\nword_counts = {}\nfor word in text.split():\n    word_counts[word] = word_counts.get(word, 0) + 1\nprint(word_counts)\nprint(\", \".join(sorted(set(text.replace(\" \", \"\")))))\nprint(text.title(), text.upper(), text.count(\"o\"), text.find(\"fox\"), text.replace(\"lazy\", \"sleepy\"))\nprint(text[:9], text[-3:], text[::2], len(text))\nprint(\"%s is %d years old\" % (\"Tom\", 42))\nprint(\"{} + {} = {}\".format(2, 3, 2 + 3))\nvalue = 1234567.891\nprint(f\"{value:,.2f} {value:e} {42:05d} {0.25:.0%} {'left':<10}|{'right':>10}|{'mid':^10}|\")\nmatrix = [[1, 2, 3], [4, 5, 6]]\nfor row in matrix:\n    for cell in row:\n        print(cell, end=\"\\t\")\n    print()\n\nimport asyncio\n\n\nasync def fetch_data(name, delay):\n    print(f\"Fetching {name}...\")\n    await asyncio.sleep(delay)\n    print(f\"Done fetching {name}\")\n    return {\"name\": name, \"delay\": delay}\n\n\nasync def main():\n    tasks = [fetch_data(\"users\", 1), fetch_data(\"posts\", 2), fetch_data(\"comments\", 0.5)]\n    results = await asyncio.gather(*tasks)\n    for result in results:\n        print(result)\n\n\nasyncio.run(main())\n\n\nclass InsufficientFundsError(Exception):\n    def __init__(self, balance, amount):\n        super().__init__(f\"Cannot withdraw {amount}; balance is only {balance}\")\n        self.balance = balance\n        self.amount = amount\n\n\ndef withdraw(balance, amount):\n    if amount > balance:\n        raise InsufficientFundsError(balance, amount)\n    return balance - amount\n\n\ntry:\n    withdraw(100, 250)\nexcept InsufficientFundsError as e:\n    print(\"Error:\", e)\nexcept (TypeError, ValueError) as e:\n    print(\"Bad input:\", e)\nelse:\n    print(\"Withdrawal succeeded\")\nfinally:\n    print(\"Transaction complete\")\n\n\ndef safe_divide(a, b):\n    try:\n        return a / b\n    except ZeroDivisionError:\n        print(\"Cannot divide by zero!\")\n        return None\n\n\nprint(safe_divide(10, 2), safe_divide(1, 0))\n\nwhile True:\n    try:\n        number = int(input(\"Enter a positive integer: \"))\n        if number <= 0:\n            raise ValueError(\"Number must be positive\")\n        break\n    except ValueError as err:\n        print(f\"Invalid: {err}\")\nprint(f\"You entered {number}\")\n\ndef is_leap_year(year):\n    return year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)\n\n\ndef bmi(weight_kg, height_m):\n    return weight_kg / height_m ** 2\n\n\ndef compound_interest(principal, rate, years, n=12):\n    return principal * (1 + rate / n) ** (n * years)\n\n\ndef convert_seconds(seconds):\n    hours, remainder = divmod(seconds, 3600)\n    minutes, secs = divmod(remainder, 60)\n    return f\"{hours:02d}:{minutes:02d}:{secs:02d}\"\n\n\ndef multiplication_table(n, up_to=10):\n    for i in range(1, up_to + 1):\n        print(f\"{n} x {i} = {n * i}\")\n\n\ndef print_pattern(rows):\n    for i in range(1, rows + 1):\n        print(\" \" * (rows - i) + \"*\" * (2 * i - 1))\n\n\ndef decimal_to_binary(n):\n    if n == 0:\n        return \"0\"\n    bits = \"\"\n    while n > 0:\n        bits = str(n % 2) + bits\n        n //= 2\n    return bits\n\n\ndef caesar_cipher(text, shift):\n    result = \"\"\n    for char in text:\n        if char.isalpha():\n            base = ord(\"A\") if char.isupper() else ord(\"a\")\n            result += chr((ord(char) - base + shift) % 26 + base)\n        else:\n            result += char\n    return result\n\n\ndef find_duplicates(items):\n    seen = set()\n    duplicates = set()\n    for item in items:\n        if item in seen:\n            duplicates.add(item)\n        seen.add(item)\n    return list(duplicates)\n\n\ndef second_largest(numbers):\n    unique = sorted(set(numbers))\n    return unique[-2] if len(unique) >= 2 else None\n\n\nyear = int(input(\"Enter a year: \"))\nif is_leap_year(year):\n    print(f\"{year} is a leap year\")\nelse:\n    print(f\"{year} is not a leap year\")\n\nprint(f\"BMI: {bmi(70, 1.75):.1f}\")\nprint(f\"${compound_interest(1000, 0.05, 10):,.2f}\")\nprint(convert_seconds(3725))\nmultiplication_table(7)\nprint_pattern(5)\nprint(decimal_to_binary(42), bin(42), int(\"101010\", 2), hex(255))\nencrypted = caesar_cipher(\"Hello, World!\", 3)\nprint(encrypted, caesar_cipher(encrypted, -3))\nprint(find_duplicates([1, 2, 3, 2, 4, 1]))\nprint(second_largest([10, 20, 4, 45, 99, 99]))\n\nimport sys\nfrom typing import Dict, List, Tuple\n\n\nMatrix = List[List[int]]\n\n\ndef read_matrix(rows: int, cols: int) -> Matrix:\n    return [[int(x) for x in input().split()][:cols] for _ in range(rows)]\n\n\ndef multiply(a: Matrix, b: Matrix) -> Matrix:\n    n, m, p = len(a), len(b), len(b[0])\n    result = [[0] * p for _ in range(n)]\n    for i in range(n):\n        for j in range(p):\n            for k in range(m):\n                result[i][j] += a[i][k] * b[k][j]\n    return result\n\n\ndef transpose(m: Matrix) -> Matrix:\n    return [list(row) for row in zip(*m)]\n\n\ndef two_sum(nums: List[int], target: int) -> Tuple[int, int]:\n    seen: Dict[int, int] = {}\n    for i, num in enumerate(nums):\n        complement = target - num\n        if complement in seen:\n            return seen[complement], i\n        seen[num] = i\n    return -1, -1\n\n\ndef max_subarray(nums: List[int]) -> int:\n    best = current = nums[0]\n    for num in nums[1:]:\n        current = max(num, current + num)\n        best = max(best, current)\n    return best\n\n\ndef valid_parentheses(s: str) -> bool:\n    stack = []\n    pairs = {\")\": \"(\", \"]\": \"[\", \"}\": \"{\"}\n    for ch in s:\n        if ch in \"([{\":\n            stack.append(ch)\n        elif ch in pairs:\n            if not stack or stack.pop() != pairs[ch]:\n                return False\n    return not stack\n\n\ndef main() -> None:\n    a = [[1, 2], [3, 4]]\n    b = [[5, 6], [7, 8]]\n    print(multiply(a, b))\n    print(transpose(a))\n    print(two_sum([2, 7, 11, 15], 9))\n    print(max_subarray([-2, 1, -3, 4, -1, 2, 1, -5, 4]))\n    print(valid_parentheses(\"({[]})\"), valid_parentheses(\"(]\"))\n    n = int(sys.stdin.readline())\n    values = list(map(int, sys.stdin.readline().split()))\n    print(sum(values[:n]))\n\n\nif __name__ == \"__main__\":\n    main()\n\nimport turtle\nimport tkinter as tk\nfrom tkinter import messagebox\n\ndef draw_square(t, size):\n    for _ in range(4):\n        t.forward(size)\n        t.right(90)\n\nwindow = tk.Tk()\nwindow.title(\"My App\")\nwindow.geometry(\"300x200\")\n\nlabel = tk.Label(window, text=\"Enter your name:\")\nlabel.pack(pady=10)\nentry = tk.Entry(window)\nentry.pack()\n\ndef greet():\n    name = entry.get()\n    messagebox.showinfo(\"Greeting\", f\"Hello, {name}!\")\n\nbutton = tk.Button(window, text=\"Greet\", command=greet)\nbutton.pack(pady=10)\nwindow.mainloop()\n\nimport re\nemail_pattern = r\"^[\\w.+-]+@[\\w-]+\\.[\\w.]+$\"\nfor email in [\"test@example.com\", \"bad-email@\", \"first.last@company.co.uk\"]:\n    if re.match(email_pattern, email):\n        print(f\"{email} is valid\")\n    else:\n        print(f\"{email} is invalid\")\nphone_numbers = re.findall(r\"\\d{3}-\\d{3}-\\d{4}\", \"Call 555-123-4567 or 555-987-6543\")\nprint(phone_numbers)\nprint(re.sub(r\"\\s+\", \" \", \"too    many     spaces\"))\n\nimport requests\nresponse = requests.get(\"https://api.example.com/data\", params={\"page\": 1})\nif response.status_code == 200:\n    print(response.json())\n\nprint(\"Hello, World!\")\n\nname = input(\"Enter your name: \")\nage = int(input(\"Enter your age: \"))\nif age >= 18:\n    print(f\"Hello {name}, you are an adult.\")\nelse:\n    print(f\"Hello {name}, you are {18 - age} years away from adulthood.\")\n\ndef is_prime(n):\n    if n < 2:\n        return False\n    for i in range(2, int(n ** 0.5) + 1):\n        if n % i == 0:\n            return False\n    return True\n\nprimes = [x for x in range(100) if is_prime(x)]\nprint(\"Primes under 100:\", primes)\nprint(\"Count:\", len(primes))\n\nimport random\n\ndef main():\n    secret = random.randint(1, 100)\n    tries = 0\n    print(\"I'm thinking of a number between 1 and 100.\")\n    while True:\n        guess = input(\"Your guess: \")\n        if not guess.isdigit():\n            print(\"Please enter a number.\")\n            continue\n        guess = int(guess)\n        tries += 1\n        if guess < secret:\n            print(\"Too low!\")\n        elif guess > secret:\n            print(\"Too high!\")\n        else:\n            print(f\"You got it in {tries} tries!\")\n            break\n\nif __name__ == \"__main__\":\n    main()\n\nclass BankAccount:\n    def __init__(self, owner, balance=0):\n        self.owner = owner\n        self.balance = balance\n\n    def deposit(self, amount):\n        if amount <= 0:\n            raise ValueError(\"Deposit must be positive\")\n        self.balance += amount\n        return self.balance\n\n    def withdraw(self, amount):\n        if amount > self.balance:\n            raise ValueError(\"Insufficient funds\")\n        self.balance -= amount\n        return self.balance\n\n    def __str__(self):\n        return f\"{self.owner}: ${self.balance:.2f}\"\n\n\nclass SavingsAccount(BankAccount):\n    def __init__(self, owner, balance=0, rate=0.02):\n        super().__init__(owner, balance)\n        self.rate = rate\n\n    def add_interest(self):\n        self.balance += self.balance * self.rate\n\n\naccounts = [BankAccount(\"Alice\", 100), SavingsAccount(\"Bob\", 500)]\nfor acc in accounts:\n    acc.deposit(50)\n    if isinstance(acc, SavingsAccount):\n        acc.add_interest()\n    print(acc)\n\ntry:\n    accounts[0].withdraw(1000)\nexcept ValueError as e:\n    print(\"Error:\", e)\n\nfrom collections import Counter\n\ntext = \"\"\"It was the best of times, it was the worst of times, it was the age of\nwisdom, it was the age of foolishness, it was the epoch of belief\"\"\"\n\nwords = [w.strip(\",.\").lower() for w in text.split()]\ncounts = Counter(words)\nfor word, n in counts.most_common(5):\n    print(f\"{word:>10} {'#' * n} {n}\")\n\ndef bubble_sort(arr):\n    n = len(arr)\n    for i in range(n):\n        swapped = False\n        for j in range(0, n - i - 1):\n            if arr[j] > arr[j + 1]:\n                arr[j], arr[j + 1] = arr[j + 1], arr[j]\n                swapped = True\n        if not swapped:\n            break\n    return arr\n\ndata = [64, 34, 25, 12, 22, 11, 90]\nprint(\"Sorted:\", bubble_sort(data.copy()))\n\nmatrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]\ntransposed = [list(row) for row in zip(*matrix)]\nprint(transposed)\n\nwith open(\"out.txt\", \"w\") as f:\n    f.write(\"\\n\".join(str(x) for x in data))\nwith open(\"out.txt\") as f:\n    print(f.read().splitlines())\n\ndef fizzbuzz(n):\n    for i in range(1, n + 1):\n        if i % 15 == 0:\n            print(\"FizzBuzz\")\n        elif i % 3 == 0:\n            print(\"Fizz\")\n        elif i % 5 == 0:\n            print(\"Buzz\")\n        else:\n            print(i)\n\nfizzbuzz(30)\n"</script>
+<!-- Dictionary for older (v2) links. FROZEN. -->
+<script type="application/json" id="linkDict">"        return obj\n    def __init__(self,\n    '\\xb1'     #  0xB1 -> PLUS-MINUS SIGN\n    def __del__(self):\n    def __next__(self):\n    def __getitem__(self, key):\n            self._commit_removals()\n        if self._pending_removals:\n                            break\n        while 1:\n        return path\nimport abc\n            except Exception:\n    '\\xad'     #  0xAD -> SOFT HYPHEN\n    '\\xa9'     #  0xA9 -> COPYRIGHT SIGN\n    *,\n    def flush(self):\n    def __getstate__(self):\n    def __exit__(self, *args):\n            warnings.warn(\n        return data\n        with self._lock:\n        import warnings\n                except ValueError:\n    False\nimport typing\n    ],\n        self._check_closed()\n        Raises:\n                raise TypeError(\n                i += 1\n    return True\n        return 1\n    def tell(self):\nif TYPE_CHECKING:\n    def run(self):\n    '\\xa0'     #  0xA0 -> NO-BREAK SPACE\nimport errno\n             'the\\n'\n        except (SystemExit, KeyboardInterrupt):\n        except StopIteration:\n        result = []\n         '\\n'\n                        try:\n                finally:\n    def __lt__(self, other):\n    main()\n        :type request: oauthlib.common.Request\n        :param request: OAuthlib request.\n    ...\n        Example::\n            return 0\n        return []\n            }\nimport socket\n                except OSError:\n        warnings.warn(\n        except BaseException as exc:\n        Arguments:\n            '\\n'\n        except OSError as e:\n        raise NotImplementedError()\n            self.close()\n        '\\n'\n    Returns:\nimport subprocess\n    '\\x7f'     #  0x7F -> DELETE\n      arg=None,\nlogger = logging.getLogger(__name__)\n        return 0\n        (\n    '\\x1b'     #  0x1B -> ESCAPE\n    '\\x1a'     #  0x1A -> SUBSTITUTE\n    '\\x17'     #  0x17 -> END OF TRANSMISSION BLOCK\n    '\\x16'     #  0x16 -> SYNCHRONOUS IDLE\n    '\\x15'     #  0x15 -> NEGATIVE ACKNOWLEDGE\n    '\\x14'     #  0x14 -> DEVICE CONTROL FOUR\n    '\\n'       #  0x0A -> LINE FEED\n    '\\t'       #  0x09 -> HORIZONTAL TABULATION\n    '\\x08'     #  0x08 -> BACKSPACE\n    '\\x07'     #  0x07 -> BELL\n    '\\x06'     #  0x06 -> ACKNOWLEDGE\n    '\\x05'     #  0x05 -> ENQUIRY\n    '\\x04'     #  0x04 -> END OF TRANSMISSION\n        return value\n                    return\n    Example::\n            except:\n        except IndexError:\n    def __hash__(self) -> int:\n        return s\n            return []\n        Decimal('1')\n        self._checkClosed()\n    ),\n        except ImportError:\n    def __eq__(self, other: object) -> bool:\n    def __str__(self) -> str:\n        ],\n    except ValueError:\n        yield\n        raise\n            ]\n            context = getcontext()\nimport types\nimport collections\n        self.close()\n    return [\n        if (\n    return False\nimport threading\n    '\\x1f'     #  0x1F -> UNIT SEPARATOR\n    '\\x1e'     #  0x1E -> RECORD SEPARATOR\n    '\\x1d'     #  0x1D -> GROUP SEPARATOR\n    '\\x1c'     #  0x1C -> FILE SEPARATOR\n    '\\x19'     #  0x19 -> END OF MEDIUM\n    '\\x18'     #  0x18 -> CANCEL\n    '\\x13'     #  0x13 -> DEVICE CONTROL THREE\n    '\\x12'     #  0x12 -> DEVICE CONTROL TWO\n    '\\x11'     #  0x11 -> DEVICE CONTROL ONE\n    '\\x10'     #  0x10 -> DATA LINK ESCAPE\n    '\\x0f'     #  0x0F -> SHIFT IN\n    '\\x0e'     #  0x0E -> SHIFT OUT\n    '\\r'       #  0x0D -> CARRIAGE RETURN\n    '\\x0c'     #  0x0C -> FORM FEED\n    '\\x0b'     #  0x0B -> VERTICAL TABULATION\n    '\\x03'     #  0x03 -> END OF TEXT\n    '\\x02'     #  0x02 -> START OF TEXT\n    '\\x01'     #  0x01 -> START OF HEADING\n    '\\x00'     #  0x00 -> NULL\n    parser.add_argument(\nimport contextlib\n    '}'        #  0x7D -> RIGHT CURLY BRACKET\n    '|'        #  0x7C -> VERTICAL LINE\n    '{'        #  0x7B -> LEFT CURLY BRACKET\n    '_'        #  0x5F -> LOW LINE\n    '^'        #  0x5E -> CIRCUMFLEX ACCENT\n    ']'        #  0x5D -> RIGHT SQUARE BRACKET\n    '\\\\'       #  0x5C -> REVERSE SOLIDUS\n    '['        #  0x5B -> LEFT SQUARE BRACKET\n    '?'        #  0x3F -> QUESTION MARK\n    '>'        #  0x3E -> GREATER-THAN SIGN\n    '='        #  0x3D -> EQUALS SIGN\n    '<'        #  0x3C -> LESS-THAN SIGN\n    ';'        #  0x3B -> SEMICOLON\n    ':'        #  0x3A -> COLON\n    '9'        #  0x39 -> DIGIT NINE\n    '8'        #  0x38 -> DIGIT EIGHT\n    '7'        #  0x37 -> DIGIT SEVEN\n    '6'        #  0x36 -> DIGIT SIX\n    '5'        #  0x35 -> DIGIT FIVE\n    '4'        #  0x34 -> DIGIT FOUR\n    '3'        #  0x33 -> DIGIT THREE\n    '2'        #  0x32 -> DIGIT TWO\n    '1'        #  0x31 -> DIGIT ONE\n    '0'        #  0x30 -> DIGIT ZERO\n    '/'        #  0x2F -> SOLIDUS\n    '.'        #  0x2E -> FULL STOP\n    '-'        #  0x2D -> HYPHEN-MINUS\n    ','        #  0x2C -> COMMA\n    '+'        #  0x2B -> PLUS SIGN\n    '*'        #  0x2A -> ASTERISK\n    ')'        #  0x29 -> RIGHT PARENTHESIS\n    '('        #  0x28 -> LEFT PARENTHESIS\n    \"'\"        #  0x27 -> APOSTROPHE\n    '&'        #  0x26 -> AMPERSAND\n    '%'        #  0x25 -> PERCENT SIGN\n    '$'        #  0x24 -> DOLLAR SIGN\n    '#'        #  0x23 -> NUMBER SIGN\n    '\"'        #  0x22 -> QUOTATION MARK\n    '!'        #  0x21 -> EXCLAMATION MARK\n    ' '        #  0x20 -> SPACE\n      stack_before=[],\n        if self.closed:\n    '~'        #  0x7E -> TILDE\n    'z'        #  0x7A -> LATIN SMALL LETTER Z\n    'y'        #  0x79 -> LATIN SMALL LETTER Y\n    'x'        #  0x78 -> LATIN SMALL LETTER X\n    'w'        #  0x77 -> LATIN SMALL LETTER W\n    'v'        #  0x76 -> LATIN SMALL LETTER V\n    'u'        #  0x75 -> LATIN SMALL LETTER U\n    't'        #  0x74 -> LATIN SMALL LETTER T\n    's'        #  0x73 -> LATIN SMALL LETTER S\n    'r'        #  0x72 -> LATIN SMALL LETTER R\n    'q'        #  0x71 -> LATIN SMALL LETTER Q\n    'p'        #  0x70 -> LATIN SMALL LETTER P\n    'o'        #  0x6F -> LATIN SMALL LETTER O\n    'n'        #  0x6E -> LATIN SMALL LETTER N\n    'm'        #  0x6D -> LATIN SMALL LETTER M\n    'l'        #  0x6C -> LATIN SMALL LETTER L\n    'k'        #  0x6B -> LATIN SMALL LETTER K\n    'j'        #  0x6A -> LATIN SMALL LETTER J\n    'i'        #  0x69 -> LATIN SMALL LETTER I\n    'h'        #  0x68 -> LATIN SMALL LETTER H\n    'g'        #  0x67 -> LATIN SMALL LETTER G\n    'f'        #  0x66 -> LATIN SMALL LETTER F\n    'e'        #  0x65 -> LATIN SMALL LETTER E\n    'd'        #  0x64 -> LATIN SMALL LETTER D\n    'c'        #  0x63 -> LATIN SMALL LETTER C\n    'b'        #  0x62 -> LATIN SMALL LETTER B\n    'a'        #  0x61 -> LATIN SMALL LETTER A\n    '`'        #  0x60 -> GRAVE ACCENT\n    'Z'        #  0x5A -> LATIN CAPITAL LETTER Z\n    'Y'        #  0x59 -> LATIN CAPITAL LETTER Y\n    'X'        #  0x58 -> LATIN CAPITAL LETTER X\n    'W'        #  0x57 -> LATIN CAPITAL LETTER W\n    'V'        #  0x56 -> LATIN CAPITAL LETTER V\n    'U'        #  0x55 -> LATIN CAPITAL LETTER U\n    'T'        #  0x54 -> LATIN CAPITAL LETTER T\n    'S'        #  0x53 -> LATIN CAPITAL LETTER S\n    'R'        #  0x52 -> LATIN CAPITAL LETTER R\n    'Q'        #  0x51 -> LATIN CAPITAL LETTER Q\n    'P'        #  0x50 -> LATIN CAPITAL LETTER P\n    'O'        #  0x4F -> LATIN CAPITAL LETTER O\n    'N'        #  0x4E -> LATIN CAPITAL LETTER N\n    'M'        #  0x4D -> LATIN CAPITAL LETTER M\n    'L'        #  0x4C -> LATIN CAPITAL LETTER L\n    'K'        #  0x4B -> LATIN CAPITAL LETTER K\n    'J'        #  0x4A -> LATIN CAPITAL LETTER J\n    'I'        #  0x49 -> LATIN CAPITAL LETTER I\n    'H'        #  0x48 -> LATIN CAPITAL LETTER H\n    'G'        #  0x47 -> LATIN CAPITAL LETTER G\n    'F'        #  0x46 -> LATIN CAPITAL LETTER F\n    'E'        #  0x45 -> LATIN CAPITAL LETTER E\n    'D'        #  0x44 -> LATIN CAPITAL LETTER D\n    'C'        #  0x43 -> LATIN CAPITAL LETTER C\n    'B'        #  0x42 -> LATIN CAPITAL LETTER B\n    'A'        #  0x41 -> LATIN CAPITAL LETTER A\n    '@'        #  0x40 -> COMMERCIAL AT\n            ),\n        self.name = name\n            return result\n        super().__init__()\nif __name__ == \"__main__\":\n            return self\n        if context is None:\n    def reset(self):\n        ),\n            except AttributeError:\n               '\\n'\nimport itertools\n    def __len__(self):\n                        )\n        Example (for a Turtle instance named turtle):\n        *,\n    while True:\n        except TypeError:\nencoding_table=codecs.charmap_build(decoding_table)\n@contextlib.contextmanager\nfrom __future__ import annotations\n            ):\n    Args:\n    return result\n                raise ValueError(\n    except OSError:\n    return None\nif __name__ == '__main__':\n    except KeyError:\n    def __hash__(self):\n            except KeyError:\n        a = _convert_other(a, raiseit=True)\nimport time\n        ...\n                        else:\n    def __reduce__(self):\n            raise TypeError(\n        return NotImplemented\n    True\n    except AttributeError:\n                    raise\n    except ImportError:\n              '\\n'\n    def __repr__(self) -> str:\n            except OSError:\n        ]\n        except Exception:\n        False\n            while True:\nimport functools\n                return True\nimport io\nimport logging\n            except ValueError:\n        except:\n        return (\ndecoding_table = (\n                return None\n    def decode(self,input,errors='strict'):\n    def encode(self,input,errors='strict'):\n                        continue\n                '\\n'\n        }\n    def __iter__(self):\n        except ValueError:\nclass StreamReader(Codec,codecs.StreamReader):\nclass StreamWriter(Codec,codecs.StreamWriter):\n                return False\n                    pass\n                     '\\n'\n    def __eq__(self, other):\n        except OSError:\n        True\nclass IncrementalDecoder(codecs.IncrementalDecoder):\n__all__ = [\n            raise ValueError(\n    def decode(self, input, final=False):\n                        break\n    finally:\n    __slots__ = ()\nimport warnings\n    def __enter__(self):\n            finally:\n            break\nclass IncrementalEncoder(codecs.IncrementalEncoder):\n    codec = codec\n           '\\n'\n    def encode(self, input, final=False):\n    def __str__(self):\n        decode=Codec().decode,\n        encode=Codec().encode,\n    '''\n        ):\nimport codecs\n    def __init__(self):\n                    try:\n    '\\ufffe'\n    ) -> None:\nclass Codec(codecs.Codec):\n                    )\n        while True:\n    ):\n        Args:\n                  '\\n'\n            return True\n    def __init__(\ndef getregentry():\n        streamreader=StreamReader,\n        streamwriter=StreamWriter,\n        incrementaldecoder=IncrementalDecoder,\n        incrementalencoder=IncrementalEncoder,\n    return codecs.CodecInfo(\n    @abc.abstractmethod\n                    continue\n        Returns:\n    def close(self):\n    @abstractmethod\n        except AttributeError:\n        except KeyError:\n                   '\\n'\n            raise\n    @staticmethod\nimport re\nexcept ImportError:\n        return result\n        return\n                raise\n            continue\n            return NotImplemented\n    },\n                pass\n        return True\n                    else:\n                return\n                    break\n        '''\n        raise NotImplementedError\n        return self\n        return False\n        self,\nimport os\n            return None\n        return None\n                continue\n                break\n            return False\n        finally:\n            pass\n    def __repr__(self):\n          '\\n'\n                )\n                try:\n        pass\nimport sys\n    @classmethod\n                 '\\n'\n    pass\n                else:\n             '\\n'\n            return\n            )\n    try:\n        )\n            try:\n    else:\n    @property\n            else:\n        try:\n        else:\ncode =  .strip( Version( t =  search( methods. parse( .lower( exception. CodecInfo( IncrementalEncoder( IncrementalDecoder( codec =  _lib. context =  modules. getregentry( file =  files. StreamWriter( response. group. .replace( _( StreamReader( set. out. isdir( wait( hash( a =  param. unittest. headers. console. signal. dirname( emit( exit( buffer. directory. raised. bytes. version =  www. cookie. obj =  pos =  arguments. bool( prefix =  values. __enter__( reset( format( instead. ns. func( BytesIO( NotImplementedError( res =  __hash__( charmap_decode( charmap_encode( argument. push( state. process. stack. package. __getitem__( _os. output. b. action. lines. encoding =  platform. issubclass( command. loop. m =  stdout. header. distribution. datetime. screen. list. __str__( d. __exit__( values( d =  objects. .split( find( str. msg. bytes( environ. _curses. utils. version. test. setattr( used. id( one =  key =  fp. dist. min( enumerate( xml. _file. server. c =  fileno( _loop. filename =  __new__( threading. readline( functools. instance. frame. struct. info( f =  text =  __eq__( exists( tell( run( flush( lexers. p. text. r. keys( token. importlib. distutils. log. details. i. match. dict( __slots__ =  max( seek( RuntimeError( inspect. info. ctypes. req. code. _internal. sock. function. class. _winapi. register( match( assertEqual( email. strip( key. None. clear( iter( i =  util. collections. remove( python. spec. endswith( sorted( subprocess. message. map( copy( type. x. next( obj. MachineState. pygments. logging. turtle. n =  add_argument( m. error( method. line =  stream. .__init__( a. add( args =  abc. support. types. source. options. tuple( errors. __class__. c. debug( Codec( update( extend( ExtendedContext. __all__ =  group( urllib. warn( io. lower( repr( _vendor. it. args. s =  path =  warnings. request. __repr__( time. line. module. bool =  replace( data. string. logger. msg =  pop( decode( data =  compile( socket. result. context. s. value. range( items( name. file. f. open( encode( parser. set( name =  read( startswith( split( pip. g. result =  typing. node. other. int( value =  t. .format( super( cls. type( hasattr( list( join( re. TypeError( close( getattr( str( .join( Decimal( object. e. get( write( print( codecs. ValueError( __init__( path. sys. isinstance( append( len( os. self.\nimport numpy as np\nimport matplotlib.pyplot as plt\nimport pandas as pd\nfrom dataclasses import dataclass\nfrom typing import List, Dict, Optional\nimport itertools\nimport functools\nimport string\nimport json\nimport os\nimport sys\nimport time\nimport datetime\nfrom collections import defaultdict, Counter, deque\nimport math\nimport random\n    @staticmethod\n    @classmethod\n    @property\n    def __repr__(self):\n        return f\"\n    def __str__(self):\n        return f\"\n    def __len__(self):\n        return len(self.\n    def __eq__(self, other):\nclass Node:\n    def __init__(self, value):\n        self.value = value\n        self.next = None\n        self.left = None\n        self.right = None\nclass Stack:\n    def __init__(self):\n        self.items = []\n    def push(self, item):\n        self.items.append(item)\n    def pop(self):\n        return self.items.pop()\n    def is_empty(self):\n        return len(self.items) == 0\n        super().__init__(\nlambda x: x\nsorted(, key=lambda x: x[1], reverse=True)\nenumerate(\nzip(\nisinstance(\n.items():\n.keys()\n.values()\n.append(\n.extend(\n.join(\n.split()\n.strip()\n.lower()\n.upper()\n.replace(\n.format(\n.startswith(\n.endswith(\n.isdigit()\n.get(\n.sort()\n.pop()\n.add(\n.count(\n.index(\n.copy()\nwith open(\"\", \"r\") as f:\n    for line in f:\ntry:\nexcept ValueError:\n    print(\"Invalid input. Please enter a number.\")\nexcept Exception as e:\n    print(f\"Error: {e}\")\nfinally:\nraise ValueError(\"\nassert\nyield\nglobal\nnonlocal\nasync def\nawait\nNone\nTrue\nFalse\ncontinue\nbreak\npass\n    while True:\n        choice = input(\"Enter your choice: \")\n        if choice == \"1\":\n        elif choice == \"2\":\n        elif choice == \"q\":\n            break\n        else:\n            print(\"Invalid choice\")\ntotal = 0\ncount = 0\nresult = []\nnumbers = [1, 2, 3, 4, 5]\nfor i in range(len(\nfor i in range(10):\nfor i in range(1, n + 1):\nfor j in range(\nfor key, value in\nfor i, x in enumerate(\n    for item in items:\n        if item\nwhile\n    return result\n    return True\n    return False\n    return None\ndef main():\nif __name__ == \"__main__\":\n    main()\nn = int(input(\"Enter a number: \"))\nname = input(\"Enter your name: \")\nprint(f\"Hello, {name}!\")\nprint(\"Hello, World!\")\nprint()\nprint(f\"{\n} {\n}\")\n\")\n        print(\n    print(\nprint(\n        return self.\n        self.\nself, \n    def __init__(self, \n    def \ndef \nclass \n        if \n    if \nif \n        elif \n    elif \nelif \n        else:\n    else:\nelse:\n        for \n    for \nfor \n in range(\n = []\n = {}\n = 0\n == 0:\n += 1\n -= 1\n is None\n is not None\n not in \n and \n or \n not \n in \n return \nlen(\nint(\nstr(\nfloat(\nlist(\ndict(\nset(\ntuple(\nrange(\ninput(\"\nsum(\nmax(\nmin(\nabs(\nround(\ntype(\nopen(\ninput(\nprint(\"\nprint(f\"\n"</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+<script>
+// PyPack: context-mixing compressor for short Python code, primed with sample Python.
+// Integer-only arithmetic, so every browser encodes and decodes identically.
+// FROZEN: changing anything here (or the primer text) breaks existing links.
+function PyPack(PRIME) {
+  const SQ = [1,2,3,6,10,16,27,45,73,120,194,310,488,747,1101,1546,2047,2549,2994,3348,3607,3785,3901,3975,4022,4050,4068,4079,4085,4089,4092,4093,4094];
+  const squash = d => { if (d > 2047) return 4095; if (d < -2047) return 1; const w = d & 127, i = (d >> 7) + 16; return (SQ[i] * (128 - w) + SQ[i + 1] * w + 64) >> 7; };
+  const STR = new Int16Array(4096);
+  { let pi = 0; for (let x = -2047; x <= 2047; x++) { const v = squash(x); for (let i = pi; i <= v; i++) STR[i] = x; pi = v + 1; } for (let i = pi; i < 4096; i++) STR[i] = 2047; }
+  const NM = 8, NI = NM + 1, TS = 1 << 22, TM = TS - 1, LIM = 255;
+  const DT = new Int32Array(LIM + 1); for (let i = 0; i <= LIM; i++) DT[i] = Math.floor(65536 * 2 / (2 * i + 3));
+  const H = (a, b) => (Math.imul(a ^ 0x9E3779B1, 0x85EBCA6B) ^ Math.imul(b + 0x632BE5AB, 0xC2B2AE35)) | 0;
+
+  function model() {
+    const apm = new Uint16Array(1024 * 33);
+    for (let c = 0; c < 1024; c++) for (let j = 0; j < 33; j++) apm[c * 33 + j] = squash((j - 16) * 128) * 16;
+    return { p: new Uint16Array(TS).fill(32768), n: new Uint8Array(TS), w: new Int32Array(2048 * NI).fill(1 << 14),
+      h: new Int32Array(NM), idx: new Int32Array(NM), st: new Int32Array(NI), apm, hist: [], c0: 1, bit: 0, c1: 0,
+      wsel: 0, pm: 2048, apmi: 0, apmw: 0, word: 0, word1: 0, col: 0, lineStart: 0, prevLineStart: 0, ind: 0 };
+  }
+  function byteUpdate(m, c) {
+    const hs = m.hist; hs.push(c);
+    const L = hs.length, b = k => (L - k >= 0 ? hs[L - k] : 0);
+    const isW = (c >= 48 && c <= 57) || (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c === 95;
+    if (isW) m.word = H(m.word, c); else if (m.word) { m.word1 = m.word; m.word = 0; }
+    if (c === 10) { m.prevLineStart = m.lineStart; m.lineStart = L; m.col = 0; m.ind = 0; }
+    else { if (m.col === m.ind && c === 32) m.ind++; m.col++; }
+    const above = m.prevLineStart + m.col < m.lineStart ? hs[m.prevLineStart + m.col] : 0;
+    m.h[0] = H(1, b(1));
+    m.h[1] = H(2, b(1) | b(2) << 8);
+    m.h[2] = H(3, b(1) | b(2) << 8 | b(3) << 16);
+    let h = H(b(1) | b(2) << 8 | b(3) << 16, b(4)); m.h[3] = H(4, h);
+    h = H(h, b(5) | b(6) << 8); m.h[4] = H(5, h);
+    m.h[5] = H(6, H(m.word, m.word1));
+    m.h[6] = H(7, H(m.ind << 16 | above << 8 | b(1), m.col === m.ind ? 1 : 0));
+    m.h[7] = H(8, H(h, b(7) | b(8) << 8 | b(9) << 16 | b(10) << 24));
+    m.c1 = b(1);
+  }
+  function predict(m) {
+    const c0 = m.c0, st = m.st;
+    for (let i = 0; i < NM; i++) { const ix = (m.h[i] + Math.imul(c0, 0x2F0B4C27 + i * 2)) & TM; m.idx[i] = ix; st[i] = STR[m.p[ix] >> 4]; }
+    st[NM] = 256;
+    const ws = m.wsel = ((c0 * 8 + m.bit) % 2048) * NI;
+    let dot = 0; for (let i = 0; i < NI; i++) dot += st[i] * m.w[ws + i];
+    let d = Math.floor(dot / 65536); if (d > 2047) d = 2047; if (d < -2047) d = -2047;
+    m.pm = squash(d);
+    const s = d + 2048, j = s >> 7, wt = s & 127, ai = ((m.c1 * 4 + (c0 >> 6)) & 1023) * 33 + j;
+    m.apmi = ai; m.apmw = wt;
+    const pa = (m.apm[ai] * (128 - wt) + m.apm[ai + 1] * wt) >> 11;
+    let p = (m.pm + 3 * pa) >> 2;
+    return p < 1 ? 1 : p > 4095 ? 4095 : p;
+  }
+  function update(m, y) {
+    for (let i = 0; i < NM; i++) { const ix = m.idx[i], n = m.n[ix]; m.p[ix] += Math.floor(((y << 16) - y - m.p[ix]) * DT[n] / 65536); if (n < LIM) m.n[ix] = n + 1; }
+    const err = (y << 12) - m.pm, ws = m.wsel;
+    for (let i = 0; i < NI; i++) m.w[ws + i] += Math.floor(m.st[i] * err / 2048);
+    const t = y ? 65535 : 0, ai = m.apmi;
+    m.apm[ai] += Math.floor((t - m.apm[ai]) * (128 - m.apmw) / 8192);
+    m.apm[ai + 1] += Math.floor((t - m.apm[ai + 1]) * m.apmw / 8192);
+    m.c0 = m.c0 * 2 + y; m.bit++;
+    if (m.bit === 8) { byteUpdate(m, m.c0 & 255); m.c0 = 1; m.bit = 0; }
+  }
+  function primed() {
+    const m = model();
+    byteUpdate(m, 10);
+    for (let i = 0; i < PRIME.length; i++) { const c = PRIME[i]; for (let k = 7; k >= 0; k--) { predict(m); update(m, (c >> k) & 1); } }
+    m.hist = [10]; m.lineStart = 1; m.prevLineStart = 1; m.col = 0; m.ind = 0; m.word = 0; m.word1 = 0;
+    byteUpdate(m, 10);
+    return m;
+  }
+  const mid = (x1, x2, p) => x1 + Math.floor((x2 - x1) / 4096) * p + Math.floor(((x2 - x1) % 4096) * p / 4096);
+  function encode(data) {
+    const m = primed(), out = [];
+    let x1 = 0, x2 = 0xFFFFFFFF;
+    const enc = y => {
+      const xm = mid(x1, x2, predict(m));
+      if (y) x2 = xm; else x1 = xm + 1;
+      update(m, y);
+      while (((x1 ^ x2) & 0xFF000000) === 0) { out.push(x2 >>> 24); x1 = (x1 * 256) % 4294967296; x2 = (x2 * 256) % 4294967296 + 255; }
+    };
+    let n = data.length; const len = [];
+    do { len.push((n & 127) | (n > 127 ? 128 : 0)); n = Math.floor(n / 128); } while (n > 0);
+    for (const b of len) for (let k = 7; k >= 0; k--) enc((b >> k) & 1);
+    for (const b of data) for (let k = 7; k >= 0; k--) enc((b >> k) & 1);
+    out.push((x1 >>> 24) + ((x1 & 0xFFFFFF) !== 0 ? 1 : 0));
+    while (out.length && out[out.length - 1] === 0) out.pop();
+    return Uint8Array.from(out);
+  }
+  function decode(buf) {
+    const m = primed();
+    let x1 = 0, x2 = 0xFFFFFFFF, x = 0, pos = 0;
+    const next = () => (pos < buf.length ? buf[pos++] : 0);
+    for (let i = 0; i < 4; i++) x = x * 256 + next();
+    const dec = () => {
+      const xm = mid(x1, x2, predict(m));
+      const y = x <= xm ? 1 : 0;
+      if (y) x2 = xm; else x1 = xm + 1;
+      update(m, y);
+      while (((x1 ^ x2) & 0xFF000000) === 0) { x1 = (x1 * 256) % 4294967296; x2 = (x2 * 256) % 4294967296 + 255; x = (x * 256) % 4294967296 + next(); }
+      return y;
+    };
+    const byte = () => { let c = 0; for (let k = 0; k < 8; k++) c = c * 2 + dec(); return c; };
+    let n = 0, mul = 1, b;
+    do { b = byte(); n += (b & 127) * mul; mul *= 128; if (mul > 2 ** 35) throw new Error('bad data'); } while (b & 128);
+    if (n > 50e6) throw new Error('bad data');
+    const out = new Uint8Array(n);
+    for (let i = 0; i < n; i++) out[i] = byte();
+    return out;
+  }
+  return { encode, decode };
+}
+
+</script>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const PYODIDE_BASE = 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/';
+const STEP_LIMIT = 5000;
+const PROJECT_KEY = 'pyplay.project', BACKUP_KEY = 'pyplay.backup', OLD_DRAFT_KEY = 'pyplay.draft', EXPLORER_KEY = 'pyplay.explorer';
+const utf8 = new TextEncoder();
+const textOrNull = bytes => { if (bytes.includes(0)) return null; try { return new TextDecoder('utf-8', { fatal: true }).decode(bytes); } catch { return null; } };
+
+const SAMPLE = `# Edit and press Run
+# Click line numbers for breakpoints, then Debug
+
+def fib(n):
+    a, b = 0, 1
+    seq = []
+    for _ in range(n):
+        seq.append(a)
+        a, b = b, a + b
+    return seq
+
+nums = fib(10)
+print("First 10 Fibonacci numbers:", nums)
+print(f"Their sum is {sum(nums)}")
+
+name = input("What's your name? ")
+print(f"Hi, {name}!")
+`;
+
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); return true; } catch { return false; } },
+  del(k) { try { localStorage.removeItem(k); } catch {} }
+};
+let toastT;
+function toast(msg) { if (!$('shareSheet').hidden) return; const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2200); }
+function status(msg) { $('status').textContent = msg; }
+const fmtSize = n => n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(n < 10240 ? 1 : 0) + ' KB' : (n / 1048576).toFixed(1) + ' MB';
+
+// ---------------- Code / Output tabs (narrow screens) ----------------
+const narrow = matchMedia('(max-width: 760px)');
+function showView(v) {
+  $('main').dataset.view = v;
+  $('viewCode').classList.toggle('active', v === 'code'); $('viewCode').setAttribute('aria-pressed', v === 'code');
+  $('viewOut').classList.toggle('active', v === 'output'); $('viewOut').setAttribute('aria-pressed', v === 'output');
+  if (v === 'output') $('outDot').hidden = true;
+  else setTimeout(() => {
+    editor.refresh();
+    const m = dbgMark || errMark;
+    if (m && editor.getDoc() === m.doc) editor.scrollIntoView({ line: m.line, ch: 0 }, 80);
+  }, 0);
+}
+function noteOutput() { if (narrow.matches && $('main').dataset.view === 'code') $('outDot').hidden = false; }
+$('viewCode').onclick = () => showView('code');
+$('viewOut').onclick = () => showView('output');
+narrow.addEventListener('change', () => setTimeout(() => editor.refresh(), 0));
+
+// ---------------- editor ----------------
+const editor = CodeMirror.fromTextArea($('code'), {
+  mode: 'python', theme: 'py', lineNumbers: true, indentUnit: 4, tabSize: 4,
+  matchBrackets: true, autoCloseBrackets: true, lineWrapping: true,
+  gutters: ['bp-gutter', 'CodeMirror-linenumbers'],
+  extraKeys: {
+    Tab: cm => cm.somethingSelected() ? cm.indentSelection('add') : cm.replaceSelection('    ', 'end'),
+    'Shift-Tab': cm => cm.indentSelection('subtract'),
+    'Ctrl-S': () => download(), 'Cmd-S': () => download()
+  }
+});
+editor.on('gutterClick', (cm, line) => {
+  const info = cm.lineInfo(line);
+  if (info.gutterMarkers && info.gutterMarkers['bp-gutter']) cm.setGutterMarker(line, 'bp-gutter', null);
+  else { const m = document.createElement('div'); m.className = 'bp-dot'; m.textContent = '●'; cm.setGutterMarker(line, 'bp-gutter', m); }
+});
+
+// ---------------- project (files) ----------------
+// Each file: { name, doc: CodeMirror.Doc } for text, or { name, bin: Uint8Array } for binary files.
+let files = [], active = null;
+const modeFor = name => /\.pyw?$/i.test(name) ? 'python' : 'text/plain';
+const fileBy = name => files.find(f => f.name === name);
+const bytesOf = f => f.bin || utf8.encode(f.doc.getValue());
+const sizeOf = f => f.bin ? f.bin.length : utf8.encode(f.doc.getValue()).length;
+function makeFile(name, content) {
+  if (typeof content !== 'string') { const t = textOrNull(content); if (t !== null) content = t; }
+  return typeof content === 'string'
+    ? { name, doc: CodeMirror.Doc(content, modeFor(name)) }
+    : { name, bin: content };
+}
+function setProject(list, open) {
+  files = list.length ? list : [makeFile('main.py', '')];
+  active = null;
+  openFile(open && fileBy(open) ? open : (fileBy('main.py') ? 'main.py' : files[0].name));
+  save();
+}
+function snapshot() { return files.map(f => ({ name: f.name, data: bytesOf(f) })); }
+
+function openFile(name) {
+  const f = fileBy(name);
+  if (!f) return;
+  active = name;
+  if (f.doc) {
+    if (editor.getDoc() !== f.doc) editor.swapDoc(f.doc);
+    $('binView').hidden = true;
+  } else {
+    $('binView').hidden = false;
+    $('binView').innerHTML = '';
+    const b = document.createElement('b'); b.textContent = f.name;
+    const d = document.createElement('div'); d.textContent = `Binary file, ${fmtSize(f.bin.length)}`;
+    const r = document.createElement('div'); r.append('Read with ');
+    const c = document.createElement('code'); c.textContent = `open(${JSON.stringify(f.name)}, "rb")`;
+    r.append(c);
+    $('binView').append(b, d, r);
+  }
+  renderFiles();
+  saveSoon();
+}
+function cleanName(name) {
+  name = String(name).trim().replace(/\\/g, '/').replace(/^\/+/, '');
+  if (!name || name.length > 200 || /\0/.test(name) || name.split('/').some(s => !s || s === '.' || s === '..')) return null;
+  return name;
+}
+function validName(name, except) {
+  if (!String(name).trim()) return [null, 'Name required'];
+  const n = cleanName(name);
+  if (!n) return [null, 'Invalid file name'];
+  if (n !== except && fileBy(n)) return [null, `${n} already exists`];
+  return [n, null];
+}
+function uniqueName(base) {
+  if (!fileBy(base)) return base;
+  const m = base.match(/^(.*?)(\.[^.\/]*)?$/);
+  for (let i = 1; ; i++) { const n = `${m[1]}${i}${m[2] || ''}`; if (!fileBy(n)) return n; }
+}
+function guardDebug() { if (dbg) { toast('Exit the debugger first'); return true; } return false; }
+
+function newFile() {
+  if (guardDebug()) return;
+  const name = uniqueName('untitled.py');
+  files.push(makeFile(name, ''));
+  setExplorer(true);
+  openFile(name);
+  startRename(name, true);
+}
+function renameFile(oldName, newName) {
+  const f = fileBy(oldName);
+  f.name = newName;
+  if (f.doc && f.doc.getMode().name !== (modeFor(newName) === 'python' ? 'python' : 'null')) {
+    const fresh = CodeMirror.Doc(f.doc.getValue(), modeFor(newName));
+    const wasActive = editor.getDoc() === f.doc;
+    f.doc = fresh;
+    if (wasActive) editor.swapDoc(fresh);
+  }
+  if (active === oldName) active = newName;
+  renderFiles(); save();
+}
+function deleteFile(name) {
+  if (files.length === 1) { toast('Can\'t delete the last file'); return; }
+  const i = files.findIndex(f => f.name === name);
+  files.splice(i, 1);
+  if (active === name) openFile(files[Math.max(0, i - 1)].name);
+  else renderFiles();
+  save();
+}
+async function addUploads(list) {
+  if (guardDebug() || !list.length) return;
+  let last = null, replaced = 0;
+  for (const file of list) {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const name = cleanName(file.name) || uniqueName('upload');
+    const existing = fileBy(name);
+    const nf = makeFile(name, bytes);
+    if (existing) { delete existing.doc; delete existing.bin; Object.assign(existing, nf); replaced++; }
+    else files.push(nf);
+    last = name;
+  }
+  setExplorer(true);
+  openFile(last);
+  save();
+  toast(list.length === 1 ? (replaced ? `Replaced ${last}` : `Added ${last}`) : `Added ${list.length} files`);
+}
+
+// rename UI (in explorer row or tab)
+function startRename(name, isNew) {
+  setExplorer(true);
+  const row = [...$('fileList').children].find(li => li.dataset.name === name);
+  if (!row) return;
+  row.innerHTML = '';
+  const input = document.createElement('input');
+  input.id = 'renameInput'; input.value = name; input.spellcheck = false;
+  input.setAttribute('autocapitalize', 'off'); input.setAttribute('aria-label', 'File name');
+  row.appendChild(input);
+  input.focus();
+  const dot = name.lastIndexOf('.');
+  input.setSelectionRange(0, dot > 0 ? dot : name.length);
+  let done = false;
+  const finish = commit => {
+    if (done) return; done = true;
+    if (commit) {
+      const [ok, err] = validName(input.value, name);
+      if (!ok) { toast(err); done = false; input.focus(); return; }
+      if (ok !== name) { renameFile(name, ok); return; }
+    }
+    renderFiles();
+  };
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+    else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+  });
+  input.addEventListener('blur', () => finish(true));
+  input.addEventListener('click', e => e.stopPropagation());
+}
+function confirmDelete(name) {
+  if (guardDebug()) return;
+  const row = [...$('fileList').children].find(li => li.dataset.name === name);
+  row.innerHTML = '';
+  const box = document.createElement('div'); box.className = 'confirm';
+  const s = document.createElement('span'); s.textContent = `Delete ${name}?`;
+  const yes = document.createElement('button'); yes.className = 'btn small stop'; yes.textContent = 'Delete';
+  const no = document.createElement('button'); no.className = 'btn small'; no.textContent = 'Cancel';
+  yes.onclick = e => { e.stopPropagation(); deleteFile(name); };
+  no.onclick = e => { e.stopPropagation(); renderFiles(); };
+  box.append(s, yes, no); row.appendChild(box); no.focus();
+}
+
+function renderFiles() {
+  // tabs
+  const tabs = $('tabs'); tabs.innerHTML = '';
+  for (const f of files) {
+    const t = document.createElement('button');
+    t.className = 'tab' + (f.name === active ? ' active' : '');
+    t.textContent = f.name; t.setAttribute('role', 'tab'); t.setAttribute('aria-selected', f.name === active);
+    t.title = 'Double-click to rename';
+    t.onclick = () => openFile(f.name);
+    t.ondblclick = () => { if (!guardDebug()) startRename(f.name); };
+    tabs.appendChild(t);
+  }
+  const at = tabs.querySelector('.active'); if (at) at.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  // explorer list
+  const ul = $('fileList'); ul.innerHTML = '';
+  for (const f of files) {
+    const li = document.createElement('li');
+    li.className = 'file-row' + (f.name === active ? ' active' : '');
+    li.dataset.name = f.name; li.tabIndex = 0;
+    const n = document.createElement('span'); n.className = 'fname'; n.textContent = f.name;
+    const s = document.createElement('span'); s.className = 'fsize'; s.textContent = fmtSize(sizeOf(f));
+    const rn = document.createElement('button'); rn.className = 'row-btn'; rn.textContent = '✎'; rn.title = 'Rename'; rn.setAttribute('aria-label', 'Rename ' + f.name);
+    const del = document.createElement('button'); del.className = 'row-btn'; del.textContent = '✕'; del.title = 'Delete'; del.setAttribute('aria-label', 'Delete ' + f.name);
+    rn.onclick = e => { e.stopPropagation(); if (!guardDebug()) startRename(f.name); };
+    del.onclick = e => { e.stopPropagation(); confirmDelete(f.name); };
+    li.onclick = () => { openFile(f.name); if (narrow.matches) setExplorer(false); };
+    li.onkeydown = e => { if (e.key === 'Enter' && e.target === li) li.onclick(); };
+    li.append(n, s, rn, del);
+    ul.appendChild(li);
+  }
+}
+
+function setExplorer(open) {
+  $('explorer').hidden = !open;
+  $('filesBtn').setAttribute('aria-expanded', open);
+  if (open) $('filesDot').hidden = true;
+  store.set(EXPLORER_KEY, open ? '1' : '0');
+  setTimeout(() => editor.refresh(), 0);
+}
+$('filesBtn').onclick = () => setExplorer($('explorer').hidden);
+$('newFileBtn').onclick = newFile;
+$('uploadBtn').onclick = () => { if (!guardDebug()) $('fileInput').click(); };
+$('fileInput').onchange = e => { addUploads([...e.target.files]); e.target.value = ''; };
+$('zipBtn').onclick = () => saveBlob(makeZip(snapshot()), 'project.zip');
+
+// drag and drop files anywhere on the page
+let dragDepth = 0;
+const hasFiles = e => e.dataTransfer && [...e.dataTransfer.types].includes('Files');
+window.addEventListener('dragenter', e => { if (hasFiles(e)) { dragDepth++; $('dropHint').hidden = false; } });
+window.addEventListener('dragleave', e => { if (hasFiles(e) && --dragDepth <= 0) { dragDepth = 0; $('dropHint').hidden = true; } });
+window.addEventListener('dragover', e => { if (hasFiles(e)) e.preventDefault(); });
+window.addEventListener('drop', e => { if (!hasFiles(e)) return; e.preventDefault(); dragDepth = 0; $('dropHint').hidden = true; addUploads([...e.dataTransfer.files]); });
+
+// ---------------- saving ----------------
+const b64 = bytes => { let s = ''; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(s); };
+const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+function serialize(withBinary = true) {
+  return JSON.stringify({ v: 3, active, files: files.filter(f => withBinary || f.doc).map(f => f.doc ? { n: f.name, t: f.doc.getValue() } : { n: f.name, b: b64(f.bin) }) });
+}
+function deserialize(json) {
+  const p = JSON.parse(json);
+  return { active: p.active, files: p.files.map(f => makeFile(f.n, f.t !== undefined ? f.t : unb64(f.b))) };
+}
+let saveT;
+function save() {
+  clearTimeout(saveT);
+  if (!store.set(PROJECT_KEY, serialize(true))) store.set(PROJECT_KEY, serialize(false));
+}
+function saveSoon() { clearTimeout(saveT); saveT = setTimeout(save, 300); }
+editor.on('change', () => { saveSoon(); clearErrMark(); });
+window.addEventListener('beforeunload', save);
+
+// ---------------- downloads ----------------
+function saveBlob(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+function download() {
+  const f = fileBy(active);
+  saveBlob(new Blob([bytesOf(f)], { type: f.doc ? 'text/plain' : 'application/octet-stream' }), f.name.split('/').pop());
+}
+$('downloadBtn').onclick = download;
+// minimal .zip writer (no compression)
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = d => { let c = 0xFFFFFFFF; for (let i = 0; i < d.length; i++) c = CRC[(c ^ d[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+function makeZip(list) {
+  const parts = [], central = []; let offset = 0;
+  const le = (n, b) => { const a = new Uint8Array(b); for (let i = 0; i < b; i++) a[i] = (n >>> (8 * i)) & 255; return a; };
+  const cat = arr => { const len = arr.reduce((s, a) => s + a.length, 0), out = new Uint8Array(len); let p = 0; for (const a of arr) { out.set(a, p); p += a.length; } return out; };
+  for (const f of list) {
+    const name = utf8.encode(f.name), crc = crc32(f.data), sz = f.data.length;
+    const common = [le(20, 2), le(0x0800, 2), le(0, 2), le(0, 2), le(0x21, 2), le(crc, 4), le(sz, 4), le(sz, 4), le(name.length, 2), le(0, 2)];
+    const local = cat([le(0x04034b50, 4), ...common, name]);
+    parts.push(local, f.data);
+    central.push(cat([le(0x02014b50, 4), le(20, 2), ...common, le(0, 2), le(0, 2), le(0, 2), le(0, 4), le(offset, 4), name]));
+    offset += local.length + sz;
+  }
+  const cd = cat(central);
+  const end = cat([le(0x06054b50, 4), le(0, 2), le(0, 2), le(list.length, 2), le(list.length, 2), le(cd.length, 4), le(offset, 4), le(0, 2)]);
+  return new Blob([...parts, cd, end], { type: 'application/zip' });
+}
+
+// ---------------- share links ----------------
+// #c<data>  one file called main.py      #m<data>  several files (name\0text\0name\0text…)
+// Both use PyPack (context mixing primed with sample Python). Older links: #d, #z, #r (+ .filename).
+let packer = null;
+const getPacker = () => packer || (packer = PyPack(utf8.encode(JSON.parse($('linkPrimer').textContent))));
+const LINK_DICT = () => utf8.encode(JSON.parse($('linkDict').textContent));
+const b64u = bytes => b64(bytes).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64u = s => { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return unb64(s); };
+
+function makeLink() {
+  const textFiles = files.filter(f => f.doc);
+  const skipped = files.filter(f => !f.doc).map(f => f.name);
+  let code;
+  if (textFiles.length === 1 && textFiles[0].name === 'main.py') code = 'c' + b64u(getPacker().encode(utf8.encode(textFiles[0].doc.getValue())));
+  else {
+    const ordered = [...textFiles].sort((a, b) => (b.name === active) - (a.name === active));
+    code = 'm' + b64u(getPacker().encode(utf8.encode(ordered.map(f => f.name + '\0' + f.doc.getValue()).join('\0'))));
+  }
+  return { url: location.href.split('#')[0] + '#' + code, skipped };
+}
+function parseLink(h) {
+  const dec = b => new TextDecoder().decode(b);
+  const kind = h[0];
+  if (kind === 'c') return { files: [makeFile('main.py', dec(getPacker().decode(unb64u(h.slice(1)))))] };
+  if (kind === 'm') {
+    const parts = dec(getPacker().decode(unb64u(h.slice(1)))).split('\0');
+    if (parts.length % 2) throw new Error('bad link');
+    const list = [];
+    for (let i = 0; i < parts.length; i += 2) { const n = cleanName(parts[i]); if (n && !list.some(f => f.name === n)) list.push(makeFile(n, parts[i + 1])); }
+    return { files: list, open: list[0] && list[0].name };
+  }
+  if ('dzr'.includes(kind)) {
+    const dot = h.indexOf('.');
+    const data = unb64u((dot === -1 ? h : h.slice(0, dot)).slice(1));
+    const name = dot === -1 ? 'main.py' : (cleanName(decodeURIComponent(h.slice(dot + 1))) || 'main.py');
+    const text = kind === 'd' ? dec(pako.inflateRaw(data, { dictionary: LINK_DICT() })) : kind === 'z' ? dec(pako.inflateRaw(data)) : dec(data);
+    return { files: [makeFile(name, text)] };
+  }
+  throw new Error('unknown link');
+}
+function loadFromHash() {
+  const h = location.hash.slice(1);
+  if (!h || !/^[cmdzr]/.test(h)) return false;
+  let parsed;
+  try { parsed = parseLink(h); } catch (e) { toast('Broken share link'); return false; }
+  if (!parsed.files.length) return false;
+  exitDebug(); stopQuietly();
+  const before = files.length ? serialize(true) : store.get(PROJECT_KEY);
+  const incoming = { files: parsed.files, open: parsed.open };
+  setProject(incoming.files, incoming.open);
+  showView('code');
+  const after = serialize(true);
+  if (before && before !== after && !isDefault(before)) { store.set(BACKUP_KEY, before); $('restoreBtn').hidden = false; }
+  status('Opened from link');
+  try { history.replaceState(null, '', location.href.split('#')[0]); } catch {}
+  return true;
+}
+const OLD_SAMPLE = SAMPLE.replace('# Edit and press Run\n# Click line numbers for breakpoints, then Debug\n', '# Edit this code and press Run.\n# Click line numbers to add breakpoints, then press Debug.\n');
+function isDefault(json) {
+  try { const p = JSON.parse(json); return p.files.length === 1 && [SAMPLE, OLD_SAMPLE, ''].includes(p.files[0].t); } catch { return false; }
+}
+$('restoreBtn').onclick = () => {
+  const b = store.get(BACKUP_KEY);
+  if (b) { exitDebug(); const p = deserialize(b); setProject(p.files, p.active); store.del(BACKUP_KEY); status('Restored'); }
+  $('restoreBtn').hidden = true;
+};
+
+function openShare() {
+  let link;
+  try { link = makeLink(); } catch (e) { toast('Couldn\'t create link'); return; }
+  $('shareUrl').value = link.url;
+  $('shareMeta').textContent = link.skipped.length ? `Binary files left out: ${link.skipped.join(', ')}` : '';
+  $('shareMeta').hidden = !link.skipped.length;
+  $('shareSheet').hidden = false;
+  $('toast').hidden = true;
+  copyLink();
+}
+let copyT;
+async function copyLink() {
+  const btn = $('copyBtn');
+  clearTimeout(copyT);
+  try { await navigator.clipboard.writeText($('shareUrl').value); btn.textContent = 'Copied'; }
+  catch { $('shareUrl').focus(); $('shareUrl').select(); btn.textContent = 'Copy'; }
+  copyT = setTimeout(() => btn.textContent = 'Copy', 1800);
+}
+$('shareBtn').onclick = openShare;
+$('copyBtn').onclick = copyLink;
+$('closeShareBtn').onclick = () => { $('shareSheet').hidden = true; };
+$('shareUrl').onfocus = e => e.target.select();
+window.addEventListener('hashchange', loadFromHash);
+
+// ---------------- terminal output ----------------
+const out = $('output');
+function write(el, text, cls) {
+  if (!text) return;
+  const last = el.lastChild;
+  if (last && last.nodeType === 1 && last.tagName === 'SPAN' && last.className === (cls || 'out')) { last.textContent += text; return; }
+  const s = document.createElement('span'); s.className = cls || 'out'; s.textContent = text; el.appendChild(s);
+}
+const scrollDown = el => { el.scrollTop = el.scrollHeight; };
+function askInline(container, scroller, onSubmit) {
+  const field = document.createElement('input');
+  field.className = 'in-field'; field.id = 'stdin';
+  field.setAttribute('aria-label', 'Program input');
+  field.autocomplete = 'off'; field.spellcheck = false;
+  field.setAttribute('autocapitalize', 'off'); field.setAttribute('autocorrect', 'off');
+  field.setAttribute('enterkeyhint', 'send');
+  container.appendChild(field);
+  scrollDown(scroller);
+  field.focus({ preventScroll: true });
+  field.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); const v = field.value; field.remove(); onSubmit(v); }
+  });
+  return field;
+}
+
+// line highlights (error / debugger), tracked per document
+let errMark = null, dbgMark = null;
+function clearErrMark() { if (errMark) { errMark.doc.removeLineClass(errMark.line, 'background', 'err-line'); errMark = null; } }
+function markLine(kind, fileName, line) {
+  const f = fileBy(fileName);
+  if (!f || !f.doc || !line || line > f.doc.lineCount()) return null;
+  if (active !== fileName) openFile(fileName);
+  f.doc.addLineClass(line - 1, 'background', kind);
+  editor.scrollIntoView({ line: line - 1, ch: 0 }, 80);
+  return { doc: f.doc, line: line - 1 };
+}
+function markErr(loc) { clearErrMark(); if (loc) errMark = markLine('err-line', loc[0], loc[1]); }
+
+// ---------------- Python worker ----------------
+let worker = null, pyReady = null, jobId = 0, job = null;
+function startWorker() {
+  status('Loading Python');
+  worker = new Worker(URL.createObjectURL(new Blob([$('workerSrc').textContent], { type: 'text/javascript' })));
+  let resolve, reject;
+  pyReady = new Promise((a, b) => { resolve = a; reject = b; });
+  pyReady.catch(() => {});
+  worker.onmessage = e => {
+    const m = e.data;
+    if (m.t === 'ready') { status('Ready'); resolve(); }
+    else if (m.t === 'fatal') { status('Couldn\'t load Python, check your connection'); reject(new Error(m.msg)); }
+    else if (m.t === 'status') { if (job) status(m.msg.replace(/[.…\s]+$/, '')); }
+    else if (m.t === 'started') { if (job && job.id === m.id) status(job.type === 'run' ? `Running ${job.entry}` : 'Recording steps'); }
+    else if (m.t === 'out') { if (job && job.type === 'run') onChunks(m.chunks); }
+    else if (m.t === 'done') { if (job && job.id === m.id) { job = null; onRunDone(m.res, m.changed); } }
+    else if (m.t === 'traced') { if (job && job.id === m.id) { job = null; onTraced(m.res); } }
+  };
+  worker.onerror = e => status('Python error: ' + String(e.message || 'unknown').replace(/\.+$/, ''));
+  worker.postMessage({ t: 'init', base: PYODIDE_BASE, py: $('pySrc').textContent });
+}
+function restartWorker() { if (worker) worker.terminate(); job = null; startWorker(); }
+async function send(type, payload) {
+  await pyReady;
+  job = { id: ++jobId, type, entry: payload.entry };
+  worker.postMessage({ t: type, id: job.id, ...payload });
+}
+function entryFile() {
+  if (/\.py$/i.test(active) && fileBy(active).doc) return active;
+  if (fileBy('main.py')) return 'main.py';
+  const f = files.find(f => f.doc && /\.py$/i.test(f.name));
+  return f ? f.name : null;
+}
+
+// ---------------- Run ----------------
+// input() works by replay: when the program asks for input it pauses (ends), you type
+// an answer, and the program re-runs from the top with all answers so far. Output that's
+// already on screen isn't repeated, and random numbers are seeded per session so the
+// replay matches up to the point where it stopped.
+let session = null, inputField = null;
+function setMode(m) {
+  const rb = $('runBtn');
+  if (m === 'idle') { rb.textContent = '▶ Run'; rb.className = 'btn primary'; rb.title = 'Run (Ctrl/Cmd + Enter)'; }
+  else { rb.textContent = '■ Stop'; rb.className = 'btn stop'; rb.title = 'Stop'; }
+  $('debugBtn').disabled = m === 'busy';
+}
+function run() {
+  if (session || job) { stop(); return; }
+  exitDebug(); clearErrMark();
+  out.textContent = '';
+  const entry = entryFile();
+  if (!entry) { write(out, 'No .py file to run', 'note'); return; }
+  session = { entry, files: snapshot(), inputs: [], seed: (Math.random() * 2 ** 31) | 0, shown: 0, recv: 0, t0: 0 };
+  showView('output');
+  attempt();
+}
+function attempt() {
+  session.recv = 0; session.t0 = performance.now();
+  setMode('busy');
+  send('run', { files: session.files, entry: session.entry, inputs: session.inputs, seed: session.seed })
+    .catch(() => { session = null; setMode('idle'); write(out, 'Couldn\'t load Python', 'err'); });
+}
+function onChunks(chunks) {
+  if (!session) return;
+  for (const [kind, text] of chunks) {
+    const start = session.recv;
+    session.recv += text.length;
+    if (session.recv <= session.shown) continue;
+    write(out, start < session.shown ? text.slice(session.shown - start) : text, kind === 'in' ? 'in' : kind === 'err' ? 'err' : 'out');
+    session.shown = session.recv;
+  }
+  noteOutput();
+  scrollDown($('outWrap'));
+}
+function onRunDone(res, changed) {
+  if (!session) return;
+  if (res.need != null) {
+    noteOutput();
+    setMode('waiting');
+    status('Waiting for input');
+    inputField = askInline(out, $('outWrap'), v => {
+      inputField = null;
+      write(out, v + '\n', 'in');
+      session.shown += v.length + 1;
+      session.inputs.push(v);
+      attempt();
+    });
+    return;
+  }
+  const ms = Math.round(performance.now() - session.t0);
+  if (res.err) { write(out, (out.textContent && !out.textContent.endsWith('\n') ? '\n' : '') + res.err, 'err'); markErr(res.loc); }
+  if (!out.textContent) write(out, 'No output', 'note');
+  status((res.err ? 'Error' : 'Done') + ` in ${ms} ms`);
+  session = null; setMode('idle');
+  applyChanges(changed || []);
+  scrollDown($('outWrap'));
+}
+function applyChanges(changed) {
+  const added = [];
+  for (const c of changed) {
+    const name = cleanName(c.name);
+    if (!name) continue;
+    const f = fileBy(name), nf = makeFile(name, c.data);
+    if (!f) { files.push(nf); added.push(name); continue; }
+    if (f.doc && nf.doc) { if (f.doc.getValue() !== nf.doc.getValue()) f.doc.setValue(nf.doc.getValue()); }
+    else { delete f.doc; delete f.bin; Object.assign(f, nf); if (active === name) openFile(name); }
+  }
+  if (!changed.length) return;
+  renderFiles(); save();
+  if (added.length) {
+    if ($('explorer').hidden) $('filesDot').hidden = false;
+    toast(added.length === 1 ? `Created ${added[0]}` : `Created ${added.length} files`);
+  }
+}
+function stopQuietly() {
+  if (inputField) { inputField.remove(); inputField = null; }
+  if (job) restartWorker();
+  session = null; setMode('idle');
+}
+function stop() {
+  const wasBusy = !!job;
+  const hadSession = !!session;
+  stopQuietly();
+  if (hadSession) write(out, (out.textContent.endsWith('\n') || !out.textContent ? '' : '\n') + 'Stopped', 'note');
+  if (dbg && wasBusy) exitDebug();
+  if (!wasBusy) status('Stopped');
+}
+$('runBtn').onclick = run;
+$('clearBtn').onclick = () => { if (!session) { out.textContent = ''; clearErrMark(); } };
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); if (!dbg) run(); }
+  else if (e.key === 'Escape' && !$('shareSheet').hidden) $('shareSheet').hidden = true;
+});
+
+// ---------------- Debugger ----------------
+// Records every line the program executes (up to STEP_LIMIT), then lets you
+// step forward and back, jump between breakpoints, and inspect variables.
+let dbg = null;
+function bpSet() {
+  const s = new Set();
+  for (const f of files) if (f.doc) f.doc.eachLine(h => { if (h.gutterMarkers && h.gutterMarkers['bp-gutter']) s.add(f.name + ':' + (f.doc.getLineNumber(h) + 1)); });
+  return s;
+}
+function startDebug() {
+  if (job) return;
+  if (session) stop();
+  exitDebug(); clearErrMark();
+  const entry = entryFile();
+  if (!entry) { toast('No .py file to debug'); return; }
+  dbg = { entry, files: snapshot(), inputs: [], seed: (Math.random() * 2 ** 31) | 0, trace: null, idx: 0, resume: null };
+  showView('output');
+  record();
+}
+function record() {
+  setMode('busy'); status('Recording steps');
+  send('trace', { files: dbg.files, entry: dbg.entry, inputs: dbg.inputs, seed: dbg.seed, limit: STEP_LIMIT })
+    .catch(() => { dbg = null; setMode('idle'); });
+}
+function onTraced(res) {
+  setMode('idle');
+  if (!dbg) return;
+  dbg.trace = res;
+  const n = res.steps.length;
+  if (!n && res.need == null) {
+    exitDebug(); out.textContent = '';
+    if (res.err) { write(out, res.err, 'err'); markErr(res.loc); } else write(out, 'Nothing to step through', 'note');
+    status('Ready');
+    return;
+  }
+  editor.setOption('readOnly', true);
+  $('outWrap').hidden = true; $('debug').hidden = false;
+  $('clearBtn').hidden = true; $('exitDbgBtn').hidden = false;
+  $('rightTitle').textContent = 'Debugger'; $('viewOutLabel').textContent = 'Debugger';
+  $('debugBtn').textContent = 'Restart';
+  $('scrub').max = n;
+  status(`${n} step${n === 1 ? '' : 's'}` + (res.limited ? ' (limit reached)' : ''));
+  let target;
+  if (dbg.resume != null) target = dbg.resume;
+  else { const bps = bpSet(); target = bps.size ? res.steps.findIndex(s => s.ev === 'line' && bps.has(s.f + ':' + s.l)) : 0; if (target < 0) target = n; }
+  dbg.resume = null;
+  show(target);
+}
+function clearDbgMark() { if (dbgMark) { dbgMark.doc.removeLineClass(dbgMark.line, 'background', 'dbg-line'); dbgMark = null; } }
+function exitDebug() {
+  if (!dbg) return;
+  dbg = null;
+  clearDbgMark();
+  editor.setOption('readOnly', false);
+  $('outWrap').hidden = false; $('debug').hidden = true;
+  $('clearBtn').hidden = false; $('exitDbgBtn').hidden = true;
+  $('rightTitle').textContent = 'Output'; $('viewOutLabel').textContent = 'Output';
+  $('debugBtn').textContent = 'Debug';
+  clearErrMark();
+}
+const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+function show(i) {
+  const tr = dbg.trace, n = tr.steps.length;
+  const idx = dbg.idx = Math.max(0, Math.min(i, n));
+  const done = idx === n, st = done ? null : tr.steps[idx];
+  const waiting = done && tr.need != null;
+  $('scrub').value = idx;
+  $('stepInfo').textContent = done ? (waiting ? `Step ${n} of ${n}+ · waiting for input` : `Done · ${n} steps`) : `Step ${idx + 1} of ${n}${tr.need != null ? '+' : ''} · line ${st.l}${st.f !== dbg.entry ? ' of ' + st.f : ''}`;
+  $('dbgBack').disabled = idx === 0; $('dbgRestart').disabled = idx === 0;
+  $('dbgStep').disabled = done; $('dbgCont').disabled = done;
+
+  clearDbgMark();
+  const hl = st || (waiting ? tr.steps[n - 1] : null);
+  if (hl) dbgMark = markLine('dbg-line', hl.f, hl.l);
+
+  const lineText = st && fileBy(st.f) && fileBy(st.f).doc ? fileBy(st.f).doc.getLine(st.l - 1).trim() : '';
+  let ev;
+  if (waiting) ev = `Line ${hl ? hl.l : '?'} is <span class="wait">waiting for input</span>`;
+  else if (done) ev = tr.err ? `<span class="exc">Ended with an error</span>` : tr.limited ? `Stopped at ${STEP_LIMIT} steps, possible infinite loop` : 'Done';
+  else if (st.ev === 'return') ev = `${esc(st.stack[st.stack.length - 1].split('  ·')[0])} <span class="ret">returned</span> ${esc(st.ret)}`;
+  else if (st.ev === 'exception') ev = `Line ${st.l} <span class="exc">raised</span> ${esc(st.exc)}`;
+  else ev = `Line ${st.l}: <b>${esc(lineText)}</b>`;
+  $('eventLine').innerHTML = ev;
+
+  const view = st || tr.steps[n - 1];
+  $('stack').innerHTML = view ? view.stack.map((f, k) => (k ? '&nbsp;'.repeat(k * 2) + '↳ ' : '') + esc(f)).join('<br>') : '<span class="empty">empty</span>';
+
+  const prev = st && idx > 0 ? tr.steps[idx - 1] : null;
+  const prevMap = {};
+  if (prev && prev.stack.length === st.stack.length) for (const [k, , v] of prev.vars) prevMap[k] = v;
+  const vars = view ? view.vars : [];
+  $('vars').innerHTML = vars.length
+    ? vars.map(([k, t, v]) => `<tr class="${prev && prevMap[k] !== v ? 'changed' : ''}"><td class="name">${esc(k)}</td><td class="type">${esc(t)}</td><td class="val">${esc(v)}</td></tr>`).join('')
+    : '<tr><td class="empty">No variables yet</td></tr>';
+
+  const o = $('dbgOut');
+  o.textContent = '';
+  write(o, done ? tr.out : tr.out.slice(0, st.o), 'out');
+  if (done && tr.err) { write(o, (tr.out && !tr.out.endsWith('\n') ? '\n' : '') + tr.err, 'err'); markErr(tr.loc); } else clearErrMark();
+  if (waiting) askInline(o, $('dbgBody'), v => { dbg.inputs.push(v); dbg.resume = n; record(); });
+  else if (!o.textContent) o.innerHTML = '<span class="empty">Nothing printed yet</span>';
+}
+function cont() {
+  const bps = bpSet(), steps = dbg.trace.steps;
+  for (let j = dbg.idx + 1; j < steps.length; j++) if (steps[j].ev === 'line' && bps.has(steps[j].f + ':' + steps[j].l)) return show(j);
+  show(steps.length);
+}
+$('debugBtn').onclick = startDebug;
+$('exitDbgBtn').onclick = () => { exitDebug(); status('Ready'); };
+$('dbgStep').onclick = () => show(dbg.idx + 1);
+$('dbgBack').onclick = () => show(dbg.idx - 1);
+$('dbgRestart').onclick = () => show(0);
+$('dbgCont').onclick = cont;
+$('scrub').oninput = e => show(+e.target.value);
+document.addEventListener('keydown', e => {
+  if (!dbg || !dbg.trace || job || e.target.tagName === 'INPUT' || e.target.closest('.CodeMirror')) return;
+  if (e.key === 'ArrowRight' || e.key === 'F10') { e.preventDefault(); show(dbg.idx + 1); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); show(dbg.idx - 1); }
+  else if (e.key === 'F8') { e.preventDefault(); cont(); }
+  else if (e.key === 'Escape') exitDebug();
+});
+
+// ---------------- boot ----------------
+(function boot() {
+  let loaded = false;
+  const saved = store.get(PROJECT_KEY);
+  if (saved) {
+    try {
+      const p = deserialize(saved);
+      if (p.files.length === 1 && p.files[0].doc && p.files[0].doc.getValue() === OLD_SAMPLE) p.files[0].doc.setValue(SAMPLE);
+      setProject(p.files, p.active); loaded = true;
+    } catch {}
+  }
+  if (!loaded) setProject([makeFile('main.py', store.get(OLD_DRAFT_KEY) || SAMPLE)], 'main.py');
+  loadFromHash();
+  for (const f of files) if (f.doc) f.doc.clearHistory();
+  setExplorer(store.get(EXPLORER_KEY) === '1');
+  startWorker();
+})();
+})();
+</script>
+</body>
+</html>
