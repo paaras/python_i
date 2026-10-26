@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>Python Playground</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,6 +53,15 @@ body {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 button, input { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent; }
+/* no double-tap zoom on buttons/text; pinch still allowed where the browser permits */
+html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+/* icons drawn as SVG so phones never swap them for emoji */
+.ic { width: .8em; height: .8em; fill: currentColor; vertical-align: -0.05em; flex: none; }
+.btn .ic + span, .btn span + .ic { margin-left: .35em; }
+/* iOS zooms in on any focused field under 16px - keep fields at 16px on touch screens */
+@media (pointer: coarse) {
+  input, textarea, select, .in-field, #shareUrl, .CodeMirror textarea { font-size: 16px !important; }
+}
 [hidden] { display: none !important; }
 
 /* toolbar */
@@ -282,7 +291,7 @@ table.vars tr.changed td.val { background: var(--hl); }
 
 <header>
   <span class="brand">Python</span>
-  <button class="btn primary" id="runBtn" title="Run (Ctrl/Cmd + Enter)">▶ Run</button>
+  <button class="btn primary" id="runBtn" title="Run (Ctrl/Cmd + Enter)"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z"/></svg><span>Run</span></button>
   <button class="btn" id="debugBtn" title="Step through line by line">Debug</button>
   <span class="spacer"></span>
   <button class="btn" id="shareBtn">Share</button>
@@ -339,10 +348,10 @@ table.vars tr.changed td.val { background: var(--hl); }
 
     <div id="debug" hidden>
       <div class="dbg-controls">
-        <button class="btn" id="dbgRestart" title="First step">⏮</button>
-        <button class="btn" id="dbgBack" title="Step back (←)">◀ Back</button>
-        <button class="btn primary" id="dbgStep" title="Step forward (→)">Step ▶</button>
-        <button class="btn" id="dbgCont" title="Run to next breakpoint (F8)">Continue ⏭</button>
+        <button class="btn" id="dbgRestart" title="First step" aria-label="First step"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h2.5v14H5zM19.5 4.5v15L8.5 12z"/></svg></button>
+        <button class="btn" id="dbgBack" title="Step back (←)"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 4.5v15L4.5 12z"/></svg><span>Back</span></button>
+        <button class="btn primary" id="dbgStep" title="Step forward (→)"><span>Step</span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z"/></svg></button>
+        <button class="btn" id="dbgCont" title="Run to next breakpoint (F8)"><span>Continue</span><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 4.5v15L15.5 12zM16.5 5H19v14h-2.5z"/></svg></button>
         <span id="stepInfo"></span>
       </div>
       <div class="scrub-row"><input type="range" id="scrub" min="0" max="0" value="0" aria-label="Step"></div>
@@ -1289,8 +1298,8 @@ function entryFile() {
 let session = null, inputField = null;
 function setMode(m) {
   const rb = $('runBtn');
-  if (m === 'idle') { rb.textContent = '▶ Run'; rb.className = 'btn primary'; rb.title = 'Run (Ctrl/Cmd + Enter)'; }
-  else { rb.textContent = '■ Stop'; rb.className = 'btn stop'; rb.title = 'Stop'; }
+  if (m === 'idle') { rb.innerHTML = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z"/></svg><span>Run</span>'; rb.className = 'btn primary'; rb.title = 'Run (Ctrl/Cmd + Enter)'; }
+  else { rb.innerHTML = '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="5.5" y="5.5" width="13" height="13" rx="2"/></svg><span>Stop</span>'; rb.className = 'btn stop'; rb.title = 'Stop'; }
   $('debugBtn').disabled = m === 'busy';
 }
 function run() {
