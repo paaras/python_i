@@ -1,0 +1,1225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Python Objects</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/runmode/runmode.min.js"></script>
+<style>
+:root{
+  --ink:#111;--muted:#666;--line:#d4d4d4;--code-bg:#f6f7f9;
+  --accent:#1a5fd0;--accent-soft:#e6efff;--hl:#fff2a8;
+  --ok:#1e7e34;--ok-soft:#dff3e4;--bad:#c62828;--bad-soft:#fde0e0;--orange:#ffd9a8;
+  --fs:clamp(18px,1.15vw + 7px,30px);--cfs:clamp(15px,0.95vw + 5px,26px);
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --navh:56px;
+}
+*{box-sizing:border-box;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html,body{margin:0;height:100%;background:#fff;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden}
+.slide{position:fixed;top:0;left:0;right:0;bottom:calc(var(--navh) + env(safe-area-inset-bottom,0px));overflow-y:auto;overflow-x:hidden;padding:40px 48px 20px;display:none;flex-direction:column}
+.slide.active{display:flex}
+.inner{width:100%;max-width:min(1500px,100%);margin:0 auto}
+#s1 .inner{margin:auto}
+h1{font-size:clamp(28px,2.3vw + 10px,56px);margin:0 0 28px;line-height:1.15}
+p{font-size:var(--fs);line-height:1.5;margin:0 0 24px;max-width:72ch;text-wrap:pretty}
+code,.ic{font-family:var(--mono)}
+p code,li code,.note code,.hint code,.legend code,.card code,.ra code{background:var(--code-bg);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:.88em}
+.code{font-family:var(--mono);font-size:var(--cfs);line-height:1.6;background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:14px 18px;white-space:pre;overflow-x:auto;margin:0 0 28px}
+.code.big{font-size:calc(var(--cfs)*1.15)}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:44px;align-items:start}
+.btn{font:inherit;font-size:18px;padding:8px 16px;border:1.5px solid var(--ink);background:#fff;color:var(--ink);border-radius:6px;cursor:pointer}
+.btn:hover{background:#f0f0f0}
+.btn.primary{background:var(--ink);color:#fff}
+.btn.primary:hover{background:#333}
+.btn:disabled{opacity:.35;cursor:default}
+.btn.mono{font-family:var(--mono);font-size:calc(var(--cfs)*.85)}
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:4px 0 12px}
+.label{font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:0 0 8px}
+.out{font-family:var(--mono);font-size:var(--cfs);background:#fff;border:1.5px solid var(--ink);border-radius:8px;padding:12px 16px;white-space:pre-wrap;word-break:break-word;margin:0 0 24px}
+.err{color:var(--bad)}
+.muted{color:var(--muted)}
+.note{font-size:var(--fs);line-height:1.45;margin:16px 0 0;max-width:62ch}
+.chip{display:inline-block;font-family:var(--mono);font-size:var(--cfs);background:var(--accent-soft);border:1px solid #b9cdf5;border-radius:6px;padding:2px 10px;margin:3px 6px 3px 0}
+@keyframes pop{from{transform:scale(.85);opacity:0}to{transform:none;opacity:1}}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+.good{color:var(--ok);font-weight:700}
+.badt{color:var(--bad);font-weight:700}
+
+/* nav */
+.nav{position:fixed;left:0;right:0;bottom:0;height:calc(var(--navh) + env(safe-area-inset-bottom,0px));padding:0 18px env(safe-area-inset-bottom,0px);border-top:1px solid #e5e5e5;display:flex;align-items:center;justify-content:space-between;background:#fff;z-index:10}
+.nav .right{display:flex;gap:10px;align-items:center}
+#counter{font-size:16px;color:var(--muted);min-width:64px;text-align:center}
+#pystat{font-size:14px}
+.bar{position:fixed;left:0;bottom:calc(var(--navh) + env(safe-area-inset-bottom,0px));height:3px;background:var(--ink);transition:width .3s;z-index:10}
+
+/* code editor */
+.runner .CodeMirror{height:auto;font-family:var(--mono);font-size:var(--cfs);line-height:1.55;border:1px solid var(--line);border-radius:8px;background:var(--code-bg)}
+.runner .CodeMirror-gutters{background:var(--code-bg);border-right:1px solid var(--line)}
+.runner .CodeMirror-scroll{min-height:3em}
+.runner .CodeMirror pre.CodeMirror-line{padding-left:10px}
+.runner .out{min-height:3.2em}
+.CodeMirror textarea{font-size:16px}
+
+/* stepper */
+.stepper{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:44px;align-items:start}
+.stepcode{padding:10px 0}
+.ln{display:flex;padding:0 14px 0 4px;transition:background .2s}
+.ln .num{width:2em;color:#aaa;text-align:right;padding-right:6px;flex:none;user-select:none}
+.ln .arr{width:1.4em;flex:none;color:var(--accent);text-align:center}
+.ln .txt{white-space:pre}
+.ln.cur{background:var(--hl)}
+.ln.cur .arr::before{content:"\25B6"}
+.ln.mark{background:var(--accent-soft)}
+.cnt{font-size:16px}
+.stepper .controls{margin:6px 0 20px}
+.stepper .note{margin-top:0;min-height:2.9em}
+.stepper .out{min-height:3.2em}
+.mem{border:2px dashed var(--line);border-radius:10px;padding:14px 18px;margin-bottom:22px;min-height:3.2em}
+.mem .empty{color:#aaa;font-size:16px}
+
+/* memory: variables on the left, objects on the right, arrows between */
+.mem2{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px 64px;align-items:start}
+.mh{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:0 0 8px}
+.mvars,.mobjs{display:flex;flex-direction:column;gap:12px;min-width:0}
+.mobjs{gap:16px}
+.vrow{display:flex;align-items:center;gap:12px;min-height:36px}
+.vrow .vn{font-family:var(--mono);font-weight:700;font-size:var(--cfs)}
+.vrow .chip{margin:0}
+.ref{width:18px;height:18px;border-radius:50%;background:var(--c);flex:none;box-shadow:0 0 0 4px var(--cs)}
+.frame{border:2px dashed #9a9a9a;border-radius:10px;padding:6px 14px 8px;background:#fafafa;animation:fadein .3s}
+.frame .ft{font-size:14px;color:var(--muted);margin-bottom:2px}
+.frame .ft code{font-family:var(--mono);color:var(--ink)}
+.obj{border:2.5px solid var(--c);border-radius:12px;background:#fff;padding:6px 14px 10px;min-width:min(210px,100%);max-width:100%;transition:box-shadow .25s}
+.obj .oh{font-size:13px;font-weight:700;color:var(--c);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.obj.new{animation:flash 1.2s}
+.obj.hi{box-shadow:0 0 0 6px var(--cs)}
+@keyframes flash{from{background:var(--cs)}to{background:#fff}}
+.arow{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center;margin-top:6px;border-radius:6px;padding:2px 4px}
+.an{font-family:var(--mono);font-size:var(--cfs);color:#333}
+.av{font-family:var(--mono);font-size:var(--cfs);border:1.5px solid var(--line);border-radius:6px;padding:2px 10px;background:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;justify-self:start;max-width:100%}
+.arow.new{background:var(--ok-soft)}
+.arow.changed .av{background:var(--hl);outline:2px solid #e0c200}
+.av.lit{outline:3px solid #e0c200;background:var(--hl)}
+.oempty{color:#999;font-size:15px;padding:6px 2px 0}
+svg.arrows{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
+
+/* title */
+#s1 .inner{text-align:center}
+#s1 h1{font-size:clamp(44px,6vw,90px);margin-bottom:34px}
+.t-demo{display:flex;align-items:center;gap:22px;flex-wrap:wrap;justify-content:center;text-align:left}
+.t-expr{font-family:var(--mono);font-size:calc(var(--cfs)*1.15);border-radius:8px;padding:10px 16px;text-align:center;background:var(--code-bg);border:1px solid var(--line);min-width:9.5em}
+.t-arrow{font-size:28px;color:var(--muted)}
+#s1obj{min-width:240px;min-height:130px;display:flex;align-items:center}
+#s1obj .obj{animation:pop .4s}
+
+/* legend (writing slides) */
+.s{background:var(--hl);border-radius:4px;padding:0 3px;font-weight:700}
+.k{background:var(--accent-soft);border-radius:4px;padding:0 3px}
+.v{background:var(--orange);border-radius:4px;padding:0 3px}
+.g{background:var(--ok-soft);border-radius:4px;padding:0 3px}
+.legend{display:grid;grid-template-columns:auto 1fr;gap:16px 20px;align-items:baseline;margin:0 0 24px;font-size:var(--fs);line-height:1.4}
+.legend .sw{font-family:var(--mono);font-size:var(--cfs);text-align:center;padding:1px 8px;border-radius:4px;white-space:nowrap}
+
+/* slide 2: built-in objects */
+.bobj{border:2.5px solid var(--ink);border-radius:12px;padding:10px 16px 12px;margin:0 0 14px}
+#s2 .out{margin-bottom:0;padding:8px 14px}
+#s2 .two{margin-bottom:20px}
+.bobj .oh{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+.bobj .sval{font-family:var(--mono);font-size:calc(var(--cfs)*1.2)}
+.mrow{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+.lst{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.cell{display:flex;flex-direction:column;align-items:center}
+.cell .idx{font-family:var(--mono);font-size:15px;color:var(--muted);min-height:1.6em}
+.cell .box{font-family:var(--mono);font-size:var(--cfs);border:2px solid var(--ink);border-radius:6px;padding:7px 13px;min-width:56px;text-align:center;background:#fff}
+.cell.new .box{animation:pop .35s;background:var(--ok-soft)}
+.defs2{font-size:var(--fs);line-height:1.5;margin:8px 0 0;padding-left:1.2em;max-width:72ch}
+.defs2 li{margin:0 0 12px}
+
+/* slide 4: blueprint */
+.bp{color:#fff;border-radius:14px;padding:16px 22px;background:#1f4e99;background-image:linear-gradient(rgba(255,255,255,.09) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.09) 1px,transparent 1px);background-size:22px 22px;font-size:var(--fs);line-height:1.5}
+.bp .bt{font-family:var(--mono);font-size:calc(var(--cfs)*1.3);font-weight:700;margin-bottom:6px}
+.bp .brow{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;margin-top:8px}
+.bp .bs{font-size:14px;text-transform:uppercase;letter-spacing:.08em;opacity:.75;min-width:9.5em}
+.bp .bi{font-family:var(--mono);font-size:var(--cfs);display:inline-block;border:1.5px dashed rgba(255,255,255,.7);border-radius:6px;padding:1px 10px}
+.yard{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start;min-height:150px}
+.ocard{position:relative;animation:fly .55s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes fly{from{transform:translateX(-120px) scale(.4);opacity:0}to{transform:none;opacity:1}}
+.ocard .btn{font-size:17px;padding:5px 14px;margin-top:10px;font-family:var(--mono)}
+.bubble{position:absolute;left:50%;top:-14px;transform:translate(-50%,-100%);background:var(--ink);color:#fff;font-size:16px;border-radius:10px;padding:6px 12px;white-space:nowrap;animation:pop .3s}
+.bubble::after{content:"";position:absolute;left:50%;bottom:-7px;margin-left:-7px;border:7px solid transparent;border-bottom:0;border-top-color:var(--ink)}
+.yard-empty{color:#aaa;font-size:17px;padding-top:12px}
+
+/* cards */
+.card{border:2px solid var(--line);border-radius:12px;padding:16px 20px;font-size:var(--fs);line-height:1.45}
+.card h3{font-family:var(--mono);font-size:calc(var(--cfs)*1.1);margin:0 0 8px}
+
+/* slide 9: argument matching */
+#s9m .match{font-size:calc(var(--cfs)*1.25);gap:8px 18px}
+.match{display:inline-grid;max-width:100%;overflow-x:auto;grid-template-columns:repeat(5,auto);gap:4px 14px;align-items:center;font-family:var(--mono);font-size:var(--cfs);margin:4px 0 28px;justify-items:center}
+.match .lab{justify-self:end;color:#333}
+.match .slot{border:2px solid var(--line);border-radius:8px;padding:4px 12px;background:#fff;transition:background .3s,border-color .3s}
+.match .slot.ghost{border-style:dashed;color:var(--muted);font-family:system-ui,sans-serif;font-size:calc(var(--cfs)*.85)}
+.match .dn{color:#bbb;font-size:22px;transition:color .3s}
+.match .on{background:var(--hl);border-color:#e0c200}
+.match .dn.on{background:none;color:var(--ink)}
+
+/* slide 11: self */
+.opill{display:inline-block;font-family:system-ui,sans-serif;font-size:.85em;font-weight:700;color:#fff;background:var(--c);border-radius:20px;padding:1px 12px}
+.trans{display:grid;grid-template-columns:auto auto auto;justify-content:start;gap:14px 16px;align-items:center;font-family:var(--mono);font-size:var(--cfs);margin:0 0 26px}
+.trans .ar{color:var(--muted)}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.tab{font:inherit;font-size:17px;padding:7px 14px;border:1.5px solid var(--ink);background:#fff;border-radius:6px;cursor:pointer}
+.tab.on{background:var(--ink);color:#fff}
+.tab.mono{font-family:var(--mono)}
+.say{border-left:5px solid var(--accent);background:var(--accent-soft);padding:14px 20px;border-radius:0 10px 10px 0;font-size:var(--fs);line-height:1.5;max-width:72ch;margin:6px 0 0}
+
+/* slide 15: barking */
+.pack{display:flex;gap:22px;flex-wrap:wrap;margin:26px 0 26px;padding-top:30px}
+.scard{position:relative}
+.scard .vl{font-family:var(--mono);font-weight:700;font-size:var(--cfs);margin-bottom:6px}
+.selftag{position:absolute;right:-8px;top:-30px;background:var(--hl);border:2px solid #e0c200;font-family:var(--mono);font-weight:700;font-size:16px;border-radius:8px;padding:2px 10px;display:none}
+.scard.on .selftag{display:block;animation:pop .35s}
+.scard.on .obj{box-shadow:0 0 0 6px var(--cs)}
+.becomes{display:grid;grid-template-columns:auto 1fr;gap:10px 18px;align-items:center;font-size:var(--fs);margin:0 0 20px}
+.becomes .code{margin:0;padding:8px 14px}
+.becomes .lit2{background:var(--hl);border-radius:4px;padding:0 3px}
+
+/* recap */
+.recap{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:28px;align-items:stretch;margin:0 0 28px}
+.recap .rc{font-family:var(--mono);font-size:var(--cfs);white-space:pre;background:var(--code-bg);padding:3px 18px;border-left:1px solid var(--line);border-right:1px solid var(--line);line-height:1.6}
+.recap .rc.first{border-top:1px solid var(--line);border-radius:8px 8px 0 0;padding-top:12px}
+.recap .rc.last{border-bottom:1px solid var(--line);border-radius:0 0 8px 8px;padding-bottom:12px}
+.recap .ra{font-size:calc(var(--fs)*.85);display:flex;align-items:center;gap:10px;color:#333}
+.tag{font-family:var(--mono);font-size:.85em;font-weight:700;border-radius:5px;padding:1px 8px;white-space:nowrap}
+
+/* mistakes + practice */
+.results{list-style:none;padding:0;margin:8px 0 0;font-family:var(--mono);font-size:var(--cfs)}
+.results li{padding:4px 0;word-break:break-word}
+.results li.muted{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:17px}
+.hint{font-size:var(--fs);border-left:5px solid #e0c200;background:#fffbe6;padding:10px 16px;margin:18px 0 0;display:none;max-width:62ch;line-height:1.45}
+#s18 .stepcode{font-size:calc(var(--cfs)*.85);line-height:1.45}
+.noteright .note{min-height:4.4em;margin:0 0 18px}
+#s22run .CodeMirror{background:#fff;border:1.5px solid var(--ink)}
+#s22run .CodeMirror-gutters{background:#fff}
+
+@media (max-height:780px) and (min-width:901px){
+  :root{--fs:clamp(17px,0.85vw + 7px,26px);--cfs:clamp(14px,0.75vw + 5px,22px)}
+  .slide{padding-top:24px;padding-bottom:12px}
+  .say{padding:10px 18px}
+  #s9m .match{margin-bottom:16px}
+  .legend{gap:10px 18px;margin-bottom:18px}
+  .defs2 li{margin-bottom:8px}
+  h1{margin-bottom:20px}
+  .slide p{margin-bottom:18px}
+  .code{margin-bottom:20px}
+  .mem{margin-bottom:16px;padding:10px 14px}
+  .stepper .controls{margin:4px 0 14px}
+}
+@media (max-width:900px){
+  .two,.stepper{grid-template-columns:minmax(0,1fr);gap:24px}
+  .slide{padding:24px 16px 28px}
+  .mem2{gap:10px 40px}
+}
+@media (max-width:900px){
+  #s4 .two{display:flex;flex-direction:column;gap:18px}
+  #s4 .two > div:first-child{display:contents}
+  #s4 .bp{order:1} #s4 .controls{order:2;margin:0!important} #s4 .two > div:last-child{order:3} #s4 .two p{order:4;margin:0!important}
+}
+.tch,#s21code,#s21legend{display:none}
+@media (hover:none) and (pointer:coarse){ .kb{display:none} .tch{display:inline} }
+@media (max-width:600px){
+  #s21recap{display:none}
+  #s21code,#s21legend{display:grid}
+  #s21code{display:block}
+  #s21legend{grid-template-columns:auto 1fr;gap:10px 12px;align-items:center}
+  .legend{grid-template-columns:minmax(0,1fr);gap:4px}
+  .legend .sw{justify-self:start;margin-top:10px}
+  #s21legend{grid-template-columns:auto minmax(0,1fr);gap:10px 12px}
+  #s21legend .tag{display:inline-block}
+  :root{--fs:17px;--cfs:14px;--navh:60px}
+  h1{font-size:28px;margin-bottom:16px}
+  #s1 h1{font-size:48px}
+  .code{padding:10px 12px}
+  .btn{font-size:17px;padding:9px 14px}
+  #pystat{display:none}
+  .nav{padding-left:12px;padding-right:12px}
+  .nav .right{width:100%;justify-content:space-between}
+  .t-arrow{transform:rotate(90deg)}
+  .t-demo{flex-direction:column;gap:10px}
+  .code,.ln .txt{white-space:pre-wrap;word-break:break-word}
+  .ln .txt{min-width:0}
+  .mem2{gap:10px 30px}
+  .recap{grid-template-columns:minmax(0,1fr)}
+  .recap .ra{padding:2px 0 10px 4px}
+  .recap .ra:empty{display:none}
+  .recap .rc{white-space:pre-wrap}
+  .recap .rc{border-radius:8px;border:1px solid var(--line)}
+  .trans{grid-template-columns:auto;gap:4px}
+  .trans .ar{transform:rotate(90deg);justify-self:start;margin-left:20px}
+  .becomes{grid-template-columns:minmax(0,1fr)}
+}
+</style>
+</head>
+<body class="cm-s-default">
+
+<!-- 1 -->
+<section class="slide" id="s1"><div class="inner">
+  <h1>Objects</h1>
+  <div class="t-demo">
+    <div class="t-expr" id="s1expr"></div>
+    <span class="t-arrow">&#8594;</span>
+    <div id="s1obj"></div>
+  </div>
+  <p class="muted hint-nav" style="margin:40px auto 0;font-size:18px"><span class="kb">Use the arrow keys or the buttons at the bottom to move between slides</span><span class="tch">Use the buttons at the bottom to move between slides</span></p>
+</div></section>
+
+<!-- 2 -->
+<section class="slide" id="s2"><div class="inner">
+  <h1>You've already used objects</h1>
+  <p>Strings and lists come with functions built in, like <code>.upper()</code> and <code>.append()</code>. Click the buttons to try a few.</p>
+  <div class="two">
+    <div>
+      <div class="bobj"><div class="oh">name refers to a str object</div><div class="sval" id="s2sval"></div></div>
+      <div class="mrow" id="s2sbtns"></div>
+      <pre class="out" id="s2sout"><span class="muted">Click a button</span></pre>
+    </div>
+    <div>
+      <div class="bobj"><div class="oh">nums refers to a list object</div><div id="s2lval"></div></div>
+      <div class="mrow" id="s2lbtns"></div>
+      <pre class="out" id="s2lout"><span class="muted">Click a button</span></pre>
+    </div>
+  </div>
+  <ul class="defs2">
+    <li>A function that belongs to a value is called a <b>method</b>. You use it with a dot, like <code>name.upper()</code>.</li>
+    <li>A value that has data and methods is called an <b>object</b>.</li>
+  </ul>
+</div></section>
+
+<!-- 3 -->
+<section class="slide" id="s3"><div class="inner">
+  <h1>Why use classes?</h1>
+  <p>Say we're making a game with dogs. Every dog has a name and an age, and it can bark. Right now we'd probably use a dictionary and a separate function.</p>
+  <div class="two">
+    <div>
+      <div class="label">What we'd do now</div>
+      <div class="code" id="s3old"></div>
+    </div>
+    <div>
+      <div class="label">What we're going to build</div>
+      <div class="code" id="s3new"></div>
+    </div>
+  </div>
+  <p>The dictionary works, but the dog and the function aren't connected. We're going to make a <code>Dog</code> type so every dog has a name, an age and a <code>bark</code> method, the same way every string has <code>.upper()</code>.</p>
+</div></section>
+
+<!-- 4 -->
+<section class="slide" id="s4"><div class="inner">
+  <h1>Class and object</h1>
+  <p>A <b>class</b> is like a blueprint. It describes what every dog has and what it can do, but it isn't a dog. An <b>object</b> is a dog made from that blueprint.</p>
+  <div class="two">
+    <div>
+      <div class="bp">
+        <div class="bt">class Dog</div>
+        <div class="brow"><span class="bs">every Dog has</span><span class="bi">name</span><span class="bi">age</span></div>
+        <div class="brow"><span class="bs">every Dog can</span><span class="bi">bark()</span></div>
+      </div>
+      <div class="controls" style="margin-top:16px"><button class="btn primary" id="s4make">Make a Dog &#9654;</button><button class="btn" id="s4reset">Start over</button></div>
+      <p style="margin-top:14px">You only write the class once, but you can make as many dogs as you want, and each dog keeps track of its name and age separately.</p>
+    </div>
+    <div>
+      <div class="label">Objects</div>
+      <div class="yard" id="s4yard"></div>
+    </div>
+  </div>
+</div></section>
+
+<!-- 5 -->
+<section class="slide" id="s5"><div class="inner">
+  <h1>Writing a class</h1>
+  <p>This is the smallest class you can write. It doesn't do anything yet, but we can already make objects with it.</p>
+  <div class="two">
+  <div><div class="code big" id="s5code"></div>
+  <p>To make an object, call the class like a function. You need the parentheses or Python won't make anything.</p>
+  <div class="code big" id="s5make" style="display:inline-block;padding-right:40px"></div></div>
+  <div class="legend">
+    <span class="sw s">class</span><span>Starts a class, like <code>def</code> starts a function</span>
+    <span class="sw k">Dog</span><span>The class name. Class names start with a capital letter.</span>
+    <span class="sw s">:</span><span>Everything in the class is indented under this line</span>
+    <span class="sw g">pass</span><span>A placeholder that means "nothing here yet"</span>
+  </div>
+  </div>
+</div></section>
+
+<!-- 6 -->
+<section class="slide" id="s6"><div class="inner">
+  <h1>Attributes</h1>
+  <p>An object can have variables, called <b>attributes</b>. <code>rex.name</code> means the <code>name</code> that belongs to <code>rex</code>. It's a lot like <code>rex["name"]</code> in a dictionary, but with a dot.</p>
+  <div id="s6step"></div>
+</div></section>
+
+<!-- 7 -->
+<section class="slide" id="s7"><div class="inner">
+  <h1>Every object is separate</h1>
+  <p>Changing an attribute on Bella doesn't change Rex, because they're two separate objects.</p>
+  <div id="s7step"></div>
+</div></section>
+
+<!-- 8 -->
+<section class="slide" id="s8"><div class="inner">
+  <h1>Setting attributes by hand</h1>
+  <p>Setting attributes one at a time works, but it takes a lot of lines and it's easy to forget an attribute.</p>
+  <div id="s8step"></div>
+</div></section>
+
+<!-- 9 -->
+<section class="slide" id="s9"><div class="inner">
+  <h1>The constructor</h1>
+  <p>Setting attributes by hand means writing the same lines for every dog. Instead, we can give the class a <b>constructor</b>, which is a method that Python runs automatically every time you make a new object. In Python the constructor is always called <code>__init__</code>.</p>
+  <div class="two">
+    <div><div class="label">Without a constructor</div><div class="code" id="s9old"></div></div>
+    <div><div class="label">With a constructor</div><div class="code" id="s9code"></div></div>
+  </div>
+  <p>Both versions make the same dog. With the constructor, the name and age are set as soon as the dog is made, so you can't forget either of them.</p>
+</div></section>
+
+<!-- 9b -->
+<section class="slide" id="s9b"><div class="inner">
+  <h1>Reading the constructor</h1>
+  <p>Here's what each part of the constructor does.</p>
+  <div class="code big" id="s9b-code"></div>
+  <div class="legend">
+    <span class="sw s">__init__</span><span>The name Python looks for when it makes an object. It's short for initialize, which means set up, and it has two underscores on each side.</span>
+    <span class="sw k">self</span><span>The new dog that's being made. Python passes it in for you.</span>
+    <span class="sw v">name, age</span><span>The values you put in the parentheses when you write <code>Dog("Rex", 3)</code></span>
+    <span class="sw g">self.name = name</span><span>Saves the name on the dog, the same as writing <code>rex.name = "Rex"</code> by hand</span>
+  </div>
+</div></section>
+
+<!-- 10 -->
+<section class="slide" id="s9m"><div class="inner">
+  <h1>Passing values to the constructor</h1>
+  <p>When you write <code>Dog("Rex", 3)</code>, Python makes a new empty dog and passes it into the constructor as <code>self</code>. Then <code>"Rex"</code> and <code>3</code> go into <code>name</code> and <code>age</code>, in the same order you wrote them.</p>
+  <div class="match" id="s9match"></div>
+  <p>That's why <code>Dog("Rex", 3)</code> only has 2 values even though <code>__init__</code> has 3 parameters.</p>
+</div></section>
+
+<!-- 11 -->
+<section class="slide" id="s10"><div class="inner">
+  <h1>How an object is made</h1>
+  <p>The dashed box holds the constructor's variables. Like any function's variables, they only exist while it's running.</p>
+  <div id="s10step"></div>
+</div></section>
+
+<!-- 12 -->
+<section class="slide" id="s11"><div class="inner">
+  <h1>What is self?</h1>
+  <p>The class is written once for every dog, so the code inside it can't say <code>rex.name</code> because it doesn't know which dog it's setting up. <code>self</code> means whichever object it's working on right now.</p>
+  <div class="tabs" id="s11tabs"></div>
+  <div class="two">
+    <div>
+      <div class="label">What you write</div>
+      <div class="code" id="s11code"></div>
+    </div>
+    <div>
+      <div class="label">What it means for this dog</div>
+      <div class="trans" id="s11trans"></div>
+      <div id="s11obj"></div>
+    </div>
+  </div>
+  <div class="say">Think of <code>self</code> like the word "my". When Maya says "my name" she means Maya's name, and when Sam says it he means his.</div>
+</div></section>
+
+<!-- 13 -->
+<section class="slide" id="s12"><div class="inner">
+  <h1>name vs self.name</h1>
+  <p>These look almost the same, but they're not.</p>
+  <div class="two"><div>
+  <div style="display:grid;gap:16px;margin-bottom:24px">
+    <div class="card"><h3>name</h3>A parameter. It goes away when the constructor finishes.</div>
+    <div class="card" style="border-color:var(--accent)"><h3>self.name</h3>An attribute. It's saved on the object, so it stays.</div>
+  </div>
+  <p>If you forget <code>self.</code>, the value never gets saved on the object. Run the code to see what happens, then press <b>Fix it</b>.</p>
+  </div><div id="s12run"></div></div>
+</div></section>
+
+<!-- 14 -->
+<section class="slide" id="s13"><div class="inner">
+  <h1>Methods</h1>
+  <p>A <b>method</b> is a function inside a class. Every dog can use it, the same way every string can use <code>.upper()</code>.</p>
+  <div class="code big stepcode" id="s13code"></div>
+  <ul class="defs2">
+    <li>The first parameter is always <code>self</code></li>
+    <li><code>self.name</code> gets the name of whichever dog it's working on</li>
+    <li>You call it with a dot, like <code>rex.bark()</code>, and Python passes in <code>self</code> for you</li>
+  </ul>
+</div></section>
+
+<!-- 15 -->
+<section class="slide" id="s14"><div class="inner">
+  <h1>Calling a method</h1>
+  <p>When you call <code>rex.bark()</code>, Python passes the object before the dot in as <code>self</code>.</p>
+  <div id="s14step"></div>
+</div></section>
+
+<!-- 16 -->
+<section class="slide" id="s15"><div class="inner">
+  <h1>Calling a method on different objects</h1>
+  <p><code>bark</code> is only written once. Click a button to call it on each dog and see which dog becomes <code>self</code>.</p>
+  <div class="controls" id="s15btns"></div>
+  <div class="pack" id="s15pack"></div>
+  <div class="becomes">
+    <span class="muted">You wrote</span><div class="code" id="s15a"></div>
+    <span class="muted">This time it runs</span><div class="code" id="s15b"></div>
+  </div>
+  <div class="label">Output</div>
+  <pre class="out" id="s15out" style="min-height:3.2em"></pre>
+</div></section>
+
+<!-- 17 -->
+<section class="slide" id="s16"><div class="inner">
+  <h1>Changing attributes in a method</h1>
+  <p>Methods can change attributes, and the change stays on the object after the method is done.</p>
+  <div id="s16step"></div>
+</div></section>
+
+<!-- 18 -->
+<section class="slide" id="s17"><div class="inner">
+  <h1>Returning a value from a method</h1>
+  <p>Methods are still functions, so they can return a value too. This method works out a dog's age in human years.</p>
+  <div id="s17step"></div>
+</div></section>
+
+<!-- 19 -->
+<section class="slide" id="s18"><div class="inner">
+  <h1>Bank account example</h1>
+  <p>Methods can have more parameters after <code>self</code>. Here <code>deposit</code> and <code>withdraw</code> each take an amount.</p>
+  <div id="s18step"></div>
+</div></section>
+
+<!-- 20 -->
+<section class="slide" id="s19"><div class="inner">
+  <h1>Lists of objects</h1>
+  <p>Objects are values, so you can put them in a list. Each time through the loop, <code>dog</code> is the next dog in the list. Try adding another dog.</p>
+  <div id="s19run"></div>
+</div></section>
+
+<!-- 21 -->
+<section class="slide" id="s20"><div class="inner">
+  <h1>Common mistakes</h1>
+  <p>Run the code to see what happens, then press <b>Show fix</b>.</p>
+  <div class="tabs" id="s20tabs"></div>
+  <div class="two">
+    <div><div id="s20run"></div></div>
+    <div><div class="label">Why</div><p id="s20why" class="muted">Run the code, then press Show fix</p></div>
+  </div>
+</div></section>
+
+<!-- 22 -->
+<section class="slide" id="s21"><div class="inner">
+  <h1>Review</h1>
+  <div class="recap" id="s21recap"></div>
+  <div class="code" id="s21code"></div>
+  <div class="legend" id="s21legend"></div>
+  <p>The main thing to remember is that <code>self</code> is whichever object the code is working on. When you call a method, that's the object before the dot.</p>
+</div></section>
+
+<!-- 23 -->
+<section class="slide" id="s22"><div class="inner">
+  <h1>Practice</h1>
+  <p>Pick a task, finish the class, and press <b>Run</b> to test it.</p>
+  <div class="tabs" id="s22tabs"></div>
+  <p id="s22desc"></p>
+  <div class="two">
+    <div><div class="label">Write your code here</div><div id="s22run"></div></div>
+    <div><div class="label">Tests</div><ul class="results" id="s22res"><li class="muted">Press Run to test your class</li></ul><div class="hint" id="s22hint"></div></div>
+  </div>
+</div></section>
+
+<div class="bar" id="bar"></div>
+<div class="nav">
+  <span id="pystat" class="muted">Python: not loaded yet</span>
+  <div class="right">
+    <button class="btn" id="prev">&#9664; Back</button>
+    <span id="counter"></span>
+    <button class="btn primary" id="next">Next &#9654;</button>
+  </div>
+</div>
+
+<script>
+/* ---------- helpers ---------- */
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const $ = id => document.getElementById(id);
+
+function hl(text){
+  let html = '';
+  CodeMirror.runMode(text, 'python', (tok, style) => {
+    const t = esc(tok);
+    html += style ? `<span class="${style.split(' ').map(s => 'cm-' + s).join(' ')}">${t}</span>` : t;
+  });
+  return html;
+}
+const chip = v => `<span class="chip">${hl(v)}</span>`;
+function codeLines(code, marks = []){
+  return code.split('\n').map((l, i) => `<div class="ln${marks.includes(i + 1) ? ' mark' : ''}"><span class="num">${i + 1}</span><span class="arr"></span><span class="txt">${hl(l) || ' '}</span></div>`).join('');
+}
+function makeTabs(el, names, onSel, mono){
+  el.innerHTML = '';
+  names.forEach((n, i) => { const b = document.createElement('button'); b.className = 'tab' + (mono ? ' mono' : ''); b.textContent = n; b.onclick = () => sel(i); el.appendChild(b); });
+  function sel(i){ [...el.children].forEach((b, k) => b.classList.toggle('on', k === i)); onSel(i); }
+  sel(0);
+}
+
+/* ---------- objects + memory pictures ---------- */
+const OC = ['#1a5fd0', '#d9730d', '#1e7e34', '#7b3fc4'];
+const OS = ['#dce8ff', '#fde6cf', '#d6f0dc', '#ebdffb'];
+const cvars = id => `--c:${OC[(id - 1) % 4]};--cs:${OS[(id - 1) % 4]}`;
+
+/* o = { id, cls, attrs: [[name, repr], ...] }   st = highlight info */
+function objHTML(o, st = {}, head){
+  const rows = o.attrs.map(([n, v]) => {
+    const key = o.id + '.' + n;
+    const c = (st.cls && st.cls[key]) || '';
+    const lit = st.lit && st.lit.includes(key) ? ' lit' : '';
+    return `<div class="arow ${c}"><span class="an">${esc(n)}</span><span class="av${lit}">${hl(v)}</span></div>`;
+  }).join('');
+  const cls = (st.hiObj === o.id ? ' hi' : '') + (st.newObj === o.id ? ' new' : '');
+  return `<div class="obj${cls}" data-id="${o.id}" style="${cvars(o.id)}"><div class="oh">${esc(head || (o.cls || 'Dog') + ' object')}</div>${rows || '<div class="oempty">(no attributes yet)</div>'}</div>`;
+}
+function varHTML(v){
+  return `<div class="vrow"><span class="vn">${esc(v.n)}</span>${v.ref ? `<span class="ref" data-ref="${v.ref}" style="${cvars(v.ref)}"></span>` : chip(v.v)}</div>`;
+}
+/* st.vars = [{n, ref} or {n, v}], st.frame = {t, vars}, st.objs = [obj] */
+function memHTML(st){
+  const vars = (st.vars || []).map(varHTML).join('');
+  const frame = st.frame ? `<div class="frame"><div class="ft">inside <code>${esc(st.frame.t)}</code></div>${st.frame.vars.map(varHTML).join('')}</div>` : '';
+  const objs = (st.objs || []).map(o => objHTML(o, st)).join('');
+  if (!vars && !frame && !objs) return '';
+  return `<div class="mem2"><div class="mvars"><div class="mh">Variables</div>${vars}${frame}</div><div class="mobjs"><div class="mh">Objects</div>${objs}</div><svg class="arrows"></svg></div>`;
+}
+/* draw arrows from each variable dot to the object it refers to */
+function drawArrows(root){
+  root.querySelectorAll('.mem2').forEach(m => {
+    const svg = m.querySelector('svg.arrows');
+    const R = m.getBoundingClientRect();
+    if (!R.width) return;
+    svg.setAttribute('width', R.width); svg.setAttribute('height', R.height);
+    const count = {};
+    let h = '';
+    m.querySelectorAll('.ref').forEach(r => {
+      const id = r.dataset.ref, t = m.querySelector(`.obj[data-id="${id}"]`);
+      if (!t) return;
+      const a = r.getBoundingClientRect(), b = t.getBoundingClientRect();
+      const k = count[id] = (count[id] || 0) + 1;
+      const x1 = a.right - R.left + 3, y1 = a.top + a.height / 2 - R.top;
+      const x2 = b.left - R.left - 3, y2 = Math.min(b.top - R.top + 14 + k * 9, b.bottom - R.top - 8);
+      const dx = Math.max(24, (x2 - x1) * .5);
+      const c = OC[(id - 1) % 4];
+      h += `<path d="M${x1} ${y1} C${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2 - 9} ${y2}" stroke="${c}" stroke-width="2.5" fill="none"/>`
+        + `<polygon points="${x2},${y2} ${x2 - 11},${y2 - 6} ${x2 - 11},${y2 + 6}" fill="${c}"/>`;
+    });
+    svg.innerHTML = h;
+  });
+}
+function redrawVisible(){ document.querySelectorAll('.slide.active').forEach(drawArrows); }
+window.addEventListener('resize', redrawVisible);
+
+/* ---------- Python (Pyodide) ---------- */
+let pyPromise = null, pyReady = false;
+const pystat = $('pystat');
+function loadPy(){
+  if (!pyPromise){
+    pystat.textContent = 'Python: loading...';
+    pyPromise = new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js';
+      s.onload = () => loadPyodide().then(py => { pyReady = true; pystat.textContent = 'Python: ready'; res(py); }, rej);
+      s.onerror = rej;
+      document.head.appendChild(s);
+    });
+    pyPromise.catch(() => { pyPromise = null; pystat.textContent = 'Python: could not load (check internet)'; });
+  }
+  return pyPromise;
+}
+function cleanErr(msg){
+  const ls = msg.trim().split('\n');
+  let n = null;
+  for (const l of ls){ const m = l.match(/File "<exec>", line (\d+)/); if (m) n = m[1]; }
+  return (n ? `Error on line ${n}\n` : '') + ls[ls.length - 1];
+}
+async function pyExec(py, ns, code){
+  const out = [];
+  py.setStdout({ batched: s => out.push(s) });
+  py.setStderr({ batched: s => out.push(s) });
+  let err = '';
+  try { await py.runPythonAsync(code, { globals: ns }); }
+  catch (e) { err = cleanErr(String(e.message || e)); }
+  try { py.runPython('import sys\nsys.stdout.flush()'); } catch (e) {}
+  return { text: out.join('\n'), err };
+}
+async function runPy(code){
+  let py;
+  try { py = await loadPy(); } catch (e) { return { text: '', err: 'Python could not start. Check your internet connection and reload the page.' }; }
+  const ns = py.globals.get('dict')();
+  ns.set('__name__', '__main__');
+  const r = await pyExec(py, ns, code);
+  ns.destroy();
+  return r;
+}
+function showRes(out, r){
+  let h = esc(r.text);
+  if (r.err) h += (h ? '\n' : '') + `<span class="err">${esc(r.err)}</span>`;
+  out.innerHTML = h || '<span class="muted">(nothing was printed)</span>';
+}
+
+/* ---------- Runner: editable code + Run ---------- */
+const IDLE = '<span class="muted">Press Run to see what happens</span>';
+function makeRunner(root, code, extras = []){
+  root.classList.add('runner');
+  root.innerHTML = `<div class="ed"></div><div class="controls" style="margin-top:12px"><button class="btn primary run">Run</button><button class="btn rst">Reset code</button></div><div class="label">Output</div><pre class="out">${IDLE}</pre>`;
+  const r = { orig: code, out: root.querySelector('.out') };
+  r.cm = CodeMirror(root.querySelector('.ed'), {
+    value: code, mode: 'python', lineNumbers: true, indentUnit: 4, tabSize: 4, viewportMargin: Infinity,
+    extraKeys: {
+      Tab: cm => cm.somethingSelected() ? cm.indentSelection('add') : cm.replaceSelection('    ', 'end'),
+      'Shift-Tab': cm => cm.indentSelection('subtract'),
+      'Ctrl-Enter': () => r.run(), 'Cmd-Enter': () => r.run()
+    }
+  });
+  r.run = async () => {
+    r.out.innerHTML = pyReady ? '<span class="muted">Running...</span>' : '<span class="muted">Starting Python. The first run can take a few seconds...</span>';
+    showRes(r.out, await runPy(r.cm.getValue()));
+  };
+  r.setCode = c => { r.cm.setValue(c); r.out.innerHTML = IDLE; };
+  root.querySelector('.run').onclick = () => r.run();
+  root.querySelector('.rst').onclick = () => r.setCode(r.orig);
+  const ctr = root.querySelector('.controls');
+  extras.forEach(([label, fn]) => {
+    const b = document.createElement('button'); b.className = 'btn'; b.textContent = label;
+    b.onclick = () => fn(r, b); ctr.appendChild(b);
+  });
+  return r;
+}
+
+/* ---------- Stepper: go through code one line at a time ----------
+   Each step: { line, note, out, err, ...state }. State carries over to the next step,
+   except the highlight fields, which reset every step. */
+const TRANSIENT = ['cls', 'lit', 'hiObj', 'newObj'];
+function makeStepper(root, cfg){
+  const noteHTML = '<p class="note"></p>';
+  root.innerHTML = `<div class="stepper${cfg.noteRight ? ' noteright' : ''}"><div><div class="code stepcode"></div><div class="controls"><button class="btn" data-a="back">&#9664; Back</button><button class="btn primary" data-a="next">Next step &#9654;</button><button class="btn" data-a="reset">Start over</button><span class="muted cnt"></span></div>${cfg.noteRight ? '' : noteHTML}</div><div>${cfg.noteRight ? noteHTML : ''}<div class="label">Memory</div><div class="mem"></div><div class="label">Output</div><pre class="out"></pre></div></div>`;
+  root.querySelector('.stepcode').innerHTML = codeLines(cfg.code);
+  const lnEls = [...root.querySelectorAll('.ln')];
+  const init = { outs: [], note: 'Press <b>Next step</b> to run the code one line at a time' };
+  const states = [];
+  let prev = {}, outs = [];
+  cfg.steps.forEach(s => {
+    if (s.out !== undefined) outs = outs.concat([{ t: s.out, err: !!s.err }]);
+    const base = { ...prev };
+    TRANSIENT.forEach(k => delete base[k]);
+    const st = { ...base, ...s, outs };
+    states.push(st);
+    prev = { ...st };
+    delete prev.out; delete prev.err; delete prev.note; delete prev.line;
+  });
+  let i = -1;
+  const outEl = root.querySelector('.out'), noteEl = root.querySelector('.note'), mem = root.querySelector('.mem');
+  function render(){
+    const st = i < 0 ? init : states[i];
+    lnEls.forEach((el, k) => el.classList.toggle('cur', st.line === k + 1));
+    outEl.innerHTML = st.outs.map(o => o.err ? `<span class="err">${esc(o.t)}</span>` : esc(o.t)).join('\n');
+    mem.innerHTML = (i < 0 ? '' : memHTML(st)) || '<span class="empty">(nothing yet)</span>';
+    drawArrows(mem);
+    noteEl.innerHTML = st.note || '';
+    root.querySelector('[data-a=back]').disabled = i < 0;
+    root.querySelector('[data-a=next]').disabled = i >= states.length - 1;
+    root.querySelector('.cnt').textContent = i < 0 ? '' : `Step ${i + 1} of ${states.length}`;
+  }
+  root.querySelector('[data-a=next]').onclick = () => { if (i < states.length - 1){ i++; render(); } };
+  root.querySelector('[data-a=back]').onclick = () => { if (i >= 0){ i--; render(); } };
+  root.querySelector('[data-a=reset]').onclick = () => { i = -1; render(); };
+  render();
+}
+
+/* shorthand for steps */
+const R = (n, ref) => ({ n, ref });          // variable that refers to an object
+const VAL = (n, v) => ({ n, v });            // variable holding a plain value
+const O = (id, attrs, cls = 'Dog') => ({ id, cls, attrs });
+const REX = O(1, [['name', '"Rex"'], ['age', '3']]);
+const BELLA = O(2, [['name', '"Bella"'], ['age', '5']]);
+
+const DOG_INIT = 'class Dog:\n    def __init__(self, name, age):\n        self.name = name\n        self.age = age';
+const DOG_BARK = DOG_INIT + '\n\n    def bark(self):\n        print(self.name, "says woof!")';
+
+/* ---------- Slide 1 ---------- */
+(() => {
+  const D = [['Rex', 3], ['Bella', 5], ['Luna', 1]];
+  let k = 0;
+  function tick(){
+    const [n, a] = D[k];
+    $('s1expr').innerHTML = hl(`Dog("${n}", ${a})`);
+    $('s1obj').innerHTML = objHTML(O(k + 1, [['name', `"${n}"`], ['age', String(a)]]));
+    k = (k + 1) % D.length;
+  }
+  tick();
+  setInterval(() => { if (slides[cur] && slides[cur].id === 's1') tick(); }, 2400);
+})();
+
+/* ---------- Slide 2: built-in objects ---------- */
+(() => {
+  $('s2sval').innerHTML = hl('"maya"');
+  const SM = [['name.upper()', '"MAYA"'], ['name.title()', '"Maya"'], ['name.count("a")', '2'], ['name.replace("y", "r")', '"mara"']];
+  SM.forEach(([ex, res]) => {
+    const b = document.createElement('button'); b.className = 'btn mono'; b.textContent = ex;
+    b.onclick = () => { $('s2sout').innerHTML = hl(ex) + '  <span class="muted">gives</span>  ' + hl(res); };
+    $('s2sbtns').appendChild(b);
+  });
+
+  let nums = [3, 1, 2], added = -1;
+  const draw = () => {
+    $('s2lval').innerHTML = `<div class="lst">${nums.map((v, i) => `<div class="cell${i === added ? ' new' : ''}"><span class="idx">${i}</span><span class="box">${v}</span></div>`).join('')}</div>`;
+    added = -1;
+  };
+  const LM = [
+    ['nums.append(5)', () => { nums.push(5); added = nums.length - 1; return 'added 5 to the end'; }],
+    ['nums.sort()', () => { nums.sort((a, b) => a - b); return 'sorted the list'; }],
+    ['nums.pop()', () => nums.length ? `removed the last item and gave back ${nums.pop()}` : 'IndexError: pop from empty list'],
+    ['reset', () => { nums = [3, 1, 2]; return null; }]
+  ];
+  LM.forEach(([ex, fn]) => {
+    const b = document.createElement('button'); b.className = ex === 'reset' ? 'btn' : 'btn mono'; b.textContent = ex === 'reset' ? 'Reset' : ex;
+    b.onclick = () => {
+      const msg = fn(); draw();
+      $('s2lout').innerHTML = msg === null ? '<span class="muted">Click a button</span>' : hl(ex) + '  <span class="muted">' + esc(msg) + '</span>';
+    };
+    $('s2lbtns').appendChild(b);
+  });
+  draw();
+})();
+
+/* ---------- Slide 3 ---------- */
+$('s3old').innerHTML = hl('rex = {"name": "Rex", "age": 3}\n\ndef bark(dog):\n    print(dog["name"], "says woof!")\n\nbark(rex)');
+$('s3new').innerHTML = hl('rex = Dog("Rex", 3)\n\nrex.bark()');
+
+/* ---------- Slide 4: blueprint -> objects ---------- */
+(() => {
+  const POOL = [['Rex', 3], ['Bella', 5], ['Luna', 1], ['Max', 7]];
+  let made = 0;
+  const yard = $('s4yard');
+  const empty = () => { yard.innerHTML = '<div class="yard-empty">No dogs yet. The class doesn\'t make any on its own.</div>'; };
+  empty();
+  $('s4make').onclick = () => {
+    if (made >= POOL.length) return;
+    if (!made) yard.innerHTML = '';
+    const [n, a] = POOL[made++];
+    const d = document.createElement('div');
+    d.className = 'ocard';
+    d.innerHTML = objHTML(O(made, [['name', `"${n}"`], ['age', String(a)]])) + '<button class="btn">bark()</button>';
+    d.querySelector('button').onclick = () => {
+      d.querySelectorAll('.bubble').forEach(x => x.remove());
+      const bb = document.createElement('div'); bb.className = 'bubble'; bb.textContent = `${n} says woof!`;
+      d.appendChild(bb); setTimeout(() => bb.remove(), 1600);
+    };
+    yard.appendChild(d);
+    $('s4make').disabled = made >= POOL.length;
+  };
+  $('s4reset').onclick = () => { made = 0; $('s4make').disabled = false; empty(); };
+})();
+
+/* ---------- Slide 5 ---------- */
+(() => {
+  const S = t => `<span class="s">${t}</span>`;
+  $('s5code').innerHTML = S('<span class="cm-keyword">class</span>') + ' <span class="k">Dog</span>' + S(':') + '\n    <span class="g"><span class="cm-keyword">pass</span></span>';
+  $('s5make').innerHTML = hl('rex = Dog()');
+})();
+
+/* ---------- Slide 6: attributes ---------- */
+makeStepper($('s6step'), {
+  code: 'class Dog:\n    pass\n\nrex = Dog()\nrex.name = "Rex"\nrex.age = 3\n\nprint(rex.name)\nprint(rex.age + 1)',
+  steps: [
+    { line: 1, note: 'Python now knows what a Dog is, but there aren\'t any dogs yet' },
+    { line: 4, objs: [O(1, [])], vars: [R('rex', 1)], newObj: 1, note: '<code>Dog()</code> makes a new empty object and <code>rex</code> points to it' },
+    { line: 5, objs: [O(1, [['name', '"Rex"']])], cls: { '1.name': 'new' }, note: 'This adds an attribute called <code>name</code> to the object' },
+    { line: 6, objs: [REX], cls: { '1.age': 'new' }, note: 'Now it has an <code>age</code> too' },
+    { line: 8, lit: ['1.name'], out: 'Rex', note: 'Python follows the arrow from <code>rex</code> and gets its <code>name</code>' },
+    { line: 9, lit: ['1.age'], out: '4', note: 'Attributes work like normal variables, so <code>rex.age + 1</code> is 4' }
+  ]
+});
+
+/* ---------- Slide 7: separate objects ---------- */
+makeStepper($('s7step'), {
+  code: 'class Dog:\n    pass\n\nrex = Dog()\nrex.age = 3\n\nbella = Dog()\nbella.age = 5\n\nbella.age = 6\nprint(rex.age, bella.age)',
+  steps: [
+    { line: 1, note: 'Python now knows what a Dog is' },
+    { line: 4, objs: [O(1, [])], vars: [R('rex', 1)], newObj: 1, note: '<code>rex</code> points to a new Dog object' },
+    { line: 5, objs: [O(1, [['age', '3']])], cls: { '1.age': 'new' }, note: 'Rex\'s object gets an age of 3' },
+    { line: 7, objs: [O(1, [['age', '3']]), O(2, [])], vars: [R('rex', 1), R('bella', 2)], newObj: 2, note: 'Calling <code>Dog()</code> again makes a second object, and <code>bella</code> points to it' },
+    { line: 8, objs: [O(1, [['age', '3']]), O(2, [['age', '5']])], cls: { '2.age': 'new' }, note: 'Bella\'s object gets an age too' },
+    { line: 10, objs: [O(1, [['age', '3']]), O(2, [['age', '6']])], cls: { '2.age': 'changed' }, note: 'This only changes Bella\'s object, so Rex is still 3' },
+    { line: 11, lit: ['1.age', '2.age'], out: '3 6', note: 'Both objects have an <code>age</code>, but the values are different' }
+  ]
+});
+
+/* ---------- Slide 8: messy ---------- */
+makeStepper($('s8step'), {
+  code: 'class Dog:\n    pass\n\nrex = Dog()\nrex.name = "Rex"\nrex.age = 3\n\nluna = Dog()\nluna.name = "Luna"\n\nprint(luna.age)',
+  steps: [
+    { line: 1, note: 'This is the same empty class as before' },
+    { line: 4, objs: [O(1, [])], vars: [R('rex', 1)], newObj: 1, note: 'First we make a dog for Rex' },
+    { line: 5, objs: [O(1, [['name', '"Rex"']])], cls: { '1.name': 'new' }, note: 'Then we give it a name' },
+    { line: 6, objs: [REX], cls: { '1.age': 'new' }, note: 'And then an age, so that\'s 3 lines for each dog' },
+    { line: 8, objs: [REX, O(2, [])], vars: [R('rex', 1), R('luna', 2)], newObj: 2, note: 'Now we make a dog for Luna' },
+    { line: 9, objs: [REX, O(2, [['name', '"Luna"']])], cls: { '2.name': 'new' }, note: 'We give Luna a name but forget her age' },
+    { line: 11, hiObj: 2, out: "AttributeError: 'Dog' object has no attribute 'age'", err: true, note: 'Luna doesn\'t have an age, so the program stops. It would be easier if each dog got its name and age as soon as it was made.' }
+  ]
+});
+
+/* ---------- Slide 9: __init__ ---------- */
+(() => {
+  const S = t => `<span class="s">${t}</span>`, K = t => `<span class="k">${t}</span>`, V = t => `<span class="v">${t}</span>`, G = t => `<span class="g">${t}</span>`;
+  const kw = t => `<span class="cm-keyword">${t}</span>`, str = t => `<span class="cm-string">${t}</span>`, num = t => `<span class="cm-number">${t}</span>`;
+  $('s9old').innerHTML =
+    `${kw('class')} Dog:\n` +
+    `    ${kw('pass')}\n\n` +
+    `rex = Dog()\n` +
+    `${G('rex.name = ' + str('"Rex"'))}\n` +
+    `${G('rex.age = ' + num('3'))}`;
+  $('s9code').innerHTML =
+    `${kw('class')} Dog:\n` +
+    `    ${kw('def')} ${S('__init__')}(${K('self')}, ${V('name, age')}):\n` +
+    `        ${G('self.name = name')}\n` +
+    `        ${G('self.age = age')}\n\n` +
+    `rex = Dog(${str('"Rex"')}, ${num('3')})`;
+  $('s9b-code').innerHTML = $('s9code').innerHTML;
+  const cols = [['<span class="slot ghost">the new object</span>', 'self'], ['<span class="slot">"Rex"</span>', 'name'], ['<span class="slot">3</span>', 'age']];
+  let h = '<span class="lab">Dog(</span>' + cols.map((c, i) => c[0].replace('class="slot', `data-i="${i}" class="slot`)).join('') + '<span class="lab" style="justify-self:start">)</span>';
+  h += '<span></span>' + cols.map((c, i) => `<span class="dn" data-i="${i}">&#8595;</span>`).join('') + '<span></span>';
+  h += '<span class="lab">__init__(</span>' + cols.map((c, i) => `<span class="slot" data-i="${i}">${c[1]}</span>`).join('') + '<span class="lab" style="justify-self:start">)</span>';
+  $('s9match').innerHTML = h;
+  let k = 0;
+  setInterval(() => {
+    if (!slides[cur] || slides[cur].id !== 's9m') return;
+    $('s9match').querySelectorAll('[data-i]').forEach(e => e.classList.toggle('on', +e.dataset.i === k));
+    k = (k + 1) % 3;
+  }, 1100);
+})();
+
+/* ---------- Slide 10: making objects step by step ---------- */
+makeStepper($('s10step'), {
+  code: DOG_INIT + '\n\nrex = Dog("Rex", 3)\nbella = Dog("Bella", 5)\n\nprint(rex.name, bella.name)',
+  steps: [
+    { line: 1, note: 'Python remembers the class but doesn\'t run the code inside it yet' },
+    { line: 6, objs: [O(1, [])], newObj: 1, note: '<code>Dog("Rex", 3)</code> starts by making a new empty object' },
+    { line: 2, frame: { t: '__init__', vars: [R('self', 1), VAL('name', '"Rex"'), VAL('age', '3')] }, note: 'Then Python runs the constructor (<code>__init__</code>) automatically. <code>self</code> points to the new object, <code>"Rex"</code> goes into <code>name</code> and <code>3</code> goes into <code>age</code>.' },
+    { line: 3, objs: [O(1, [['name', '"Rex"']])], cls: { '1.name': 'new' }, note: 'This saves <code>"Rex"</code> in the object as <code>name</code>' },
+    { line: 4, objs: [REX], cls: { '1.age': 'new' }, note: 'The age is saved the same way' },
+    { line: 6, frame: null, vars: [R('rex', 1)], hiObj: 1, note: 'The constructor is done, so its variables go away. The object stays and <code>rex</code> points to it.' },
+    { line: 7, objs: [REX, O(2, [])], newObj: 2, note: 'Bella works the same way, starting with a new empty object' },
+    { line: 2, frame: { t: '__init__', vars: [R('self', 2), VAL('name', '"Bella"'), VAL('age', '5')] }, note: 'The constructor runs again, but this time <code>self</code> is Bella\'s object' },
+    { line: 3, objs: [REX, O(2, [['name', '"Bella"']])], cls: { '2.name': 'new' }, note: 'The same line now fills in Bella\'s object because that\'s where <code>self</code> points' },
+    { line: 4, objs: [REX, BELLA], cls: { '2.age': 'new' }, note: 'Her age is saved the same way' },
+    { line: 7, frame: null, vars: [R('rex', 1), R('bella', 2)], hiObj: 2, note: '<code>bella</code> points to the second object' },
+    { line: 9, lit: ['1.name', '2.name'], out: 'Rex Bella', note: 'Each dog was made with a single line' }
+  ]
+});
+
+/* ---------- Slide 11: self ---------- */
+(() => {
+  $('s11code').innerHTML = hl('def __init__(self, name, age):\n    self.name = name\n    self.age = age');
+  const D = [['rex = Dog("Rex", 3)', 1, 'Rex', '3', "Rex's object"], ['bella = Dog("Bella", 5)', 2, 'Bella', '5', "Bella's object"]];
+  makeTabs($('s11tabs'), D.map(d => d[0]), i => {
+    const [, id, n, a, label] = D[i];
+    const pill = `<span class="opill" style="${cvars(id)}">${label}</span>`;
+    $('s11trans').innerHTML =
+      `<span>${hl('self')}</span><span class="ar">&#8594;</span><span>${pill}</span>` +
+      `<span>${hl('self.name = name')}</span><span class="ar">&#8594;</span><span>${pill}${hl(`.name = "${n}"`)}</span>` +
+      `<span>${hl('self.age = age')}</span><span class="ar">&#8594;</span><span>${pill}${hl(`.age = ${a}`)}</span>`;
+    $('s11obj').innerHTML = objHTML(O(id, [['name', `"${n}"`], ['age', a]]), { newObj: id }, label);
+  }, true);
+})();
+
+/* ---------- Slide 12: name vs self.name ---------- */
+(() => {
+  const BAD = 'class Dog:\n    def __init__(self, name, age):\n        name = name\n        age = age\n\nrex = Dog("Rex", 3)\nprint(rex.name)';
+  const GOOD = DOG_INIT + '\n\nrex = Dog("Rex", 3)\nprint(rex.name)';
+  makeRunner($('s12run'), BAD, [['Fix it', r => { r.setCode(GOOD); r.run(); }]]);
+})();
+
+/* ---------- Slide 13: methods ---------- */
+$('s13code').innerHTML = codeLines(DOG_BARK, [6, 7]);
+
+/* ---------- Slide 14: calling a method ---------- */
+makeStepper($('s14step'), {
+  code: DOG_BARK + '\n\nrex = Dog("Rex", 3)\nbella = Dog("Bella", 5)\n\nrex.bark()\nbella.bark()',
+  steps: [
+    { line: 9, objs: [REX], vars: [R('rex', 1)], newObj: 1, note: '<code>rex</code> is made like before' },
+    { line: 10, objs: [REX, BELLA], vars: [R('rex', 1), R('bella', 2)], newObj: 2, note: '<code>bella</code> is made the same way' },
+    { line: 12, hiObj: 1, note: '<code>rex.bark()</code> passes Rex\'s object in as <code>self</code> because it\'s before the dot' },
+    { line: 6, frame: { t: 'bark', vars: [R('self', 1)] }, note: 'Inside <code>bark</code>, <code>self</code> points to the same object as <code>rex</code>' },
+    { line: 7, lit: ['1.name'], out: 'Rex says woof!', note: '<code>self.name</code> is <code>"Rex"</code>' },
+    { line: 13, frame: null, hiObj: 2, note: 'Now <code>bella.bark()</code> calls the same method with Bella\'s object' },
+    { line: 6, frame: { t: 'bark', vars: [R('self', 2)] }, note: 'This time <code>self</code> points to Bella' },
+    { line: 7, lit: ['2.name'], out: 'Bella says woof!', note: 'So <code>self.name</code> is <code>"Bella"</code>' },
+    { line: 0, frame: null, note: 'The code in <code>bark</code> was the same both times, only <code>self</code> was different' }
+  ]
+});
+
+/* ---------- Slide 15: same method, different object ---------- */
+(() => {
+  const D = [['rex', 'Rex', '3'], ['bella', 'Bella', '5'], ['luna', 'Luna', '1']];
+  $('s15pack').innerHTML = D.map(([v, n, a], i) => `<div class="scard" data-i="${i}"><div class="selftag">self</div><div class="vl">${v}</div>${objHTML(O(i + 1, [['name', `"${n}"`], ['age', a]]))}</div>`).join('');
+  const line = 'print(self.name, "says woof!")';
+  $('s15a').innerHTML = hl(line);
+  $('s15b').innerHTML = '<span class="muted">Click a button above</span>';
+  const outs = [];
+  D.forEach(([v, n], i) => {
+    const b = document.createElement('button'); b.className = 'btn mono'; b.textContent = `${v}.bark()`;
+    b.onclick = () => {
+      document.querySelectorAll('#s15pack .scard').forEach(c => {
+        c.classList.remove('on'); void c.offsetWidth;
+        c.classList.toggle('on', +c.dataset.i === i);
+      });
+      $('s15b').innerHTML = hl('print(') + `<span class="lit2">${hl('"' + n + '"')}</span>` + hl(', "says woof!")');
+      outs.push(`${n} says woof!`); if (outs.length > 4) outs.shift();
+      $('s15out').textContent = outs.join('\n');
+    };
+    $('s15btns').appendChild(b);
+  });
+})();
+
+/* ---------- Slide 16: changing the object ---------- */
+makeStepper($('s16step'), {
+  code: DOG_INIT + '\n\n    def birthday(self):\n        self.age = self.age + 1\n        print("Happy birthday", self.name)\n\nrex = Dog("Rex", 3)\nrex.birthday()\nrex.birthday()\nprint(rex.age)',
+  steps: [
+    { line: 10, objs: [REX], vars: [R('rex', 1)], newObj: 1, note: 'Rex starts at 3' },
+    { line: 11, hiObj: 1, note: 'This calls <code>birthday</code> on <code>rex</code>' },
+    { line: 6, frame: { t: 'birthday', vars: [R('self', 1)] }, note: '<code>self</code> points to Rex\'s object' },
+    { line: 7, objs: [O(1, [['name', '"Rex"'], ['age', '4']])], cls: { '1.age': 'changed' }, note: '<code>self.age + 1</code> is 4 and it\'s saved back into the object' },
+    { line: 8, lit: ['1.name'], out: 'Happy birthday Rex', note: 'This prints a message with his name' },
+    { line: 12, frame: null, note: 'The method is done but the object still says 4. Let\'s call it again.' },
+    { line: 6, frame: { t: 'birthday', vars: [R('self', 1)] }, note: '<code>self</code> points to Rex\'s object again' },
+    { line: 7, objs: [O(1, [['name', '"Rex"'], ['age', '5']])], cls: { '1.age': 'changed' }, note: 'Now the age goes up to 5' },
+    { line: 8, lit: ['1.name'], out: 'Happy birthday Rex', note: 'The message prints again' },
+    { line: 13, frame: null, lit: ['1.age'], out: '5', note: 'Both calls changed the same object, so Rex is now 5' }
+  ]
+});
+
+/* ---------- Slide 17: returning ---------- */
+makeStepper($('s17step'), {
+  code: DOG_INIT + '\n\n    def human_years(self):\n        return self.age * 7\n\nrex = Dog("Rex", 3)\nyears = rex.human_years()\nprint(rex.name, "is", years, "in human years")',
+  steps: [
+    { line: 9, objs: [REX], vars: [R('rex', 1)], newObj: 1, note: 'Rex is 3' },
+    { line: 10, hiObj: 1, note: 'This calls <code>human_years</code> on <code>rex</code>' },
+    { line: 6, frame: { t: 'human_years', vars: [R('self', 1)] }, note: '<code>self</code> points to Rex\'s object' },
+    { line: 7, lit: ['1.age'], note: '<code>self.age * 7</code> is 21, so it returns 21. The object doesn\'t change.' },
+    { line: 10, frame: null, vars: [R('rex', 1), VAL('years', '21')], note: 'The call gets replaced with 21, which goes into <code>years</code>' },
+    { line: 11, out: 'Rex is 21 in human years', note: 'Then we print it' }
+  ]
+});
+
+/* ---------- Slide 18: bank account ---------- */
+(() => {
+  const A = bal => [O(1, [['owner', '"Maya"'], ['balance', String(bal)]], 'Account')];
+  const acct = [R('acct', 1)];
+  makeStepper($('s18step'), {
+    noteRight: true,
+    code: 'class Account:\n    def __init__(self, owner):\n        self.owner = owner\n        self.balance = 0\n\n    def deposit(self, amount):\n        self.balance = self.balance + amount\n\n    def withdraw(self, amount):\n        if amount > self.balance:\n            print("Not enough money")\n        else:\n            self.balance = self.balance - amount\n\nacct = Account("Maya")\nacct.deposit(50)\nacct.withdraw(20)\nacct.withdraw(100)\nprint(acct.balance)',
+    steps: [
+      { line: 1, note: 'Python remembers the class' },
+      { line: 15, objs: [O(1, [], 'Account')], newObj: 1, note: 'This makes a new empty Account object' },
+      { line: 2, frame: { t: '__init__', vars: [R('self', 1), VAL('owner', '"Maya"')] }, note: 'The constructor runs with <code>"Maya"</code> in <code>owner</code>' },
+      { line: 3, objs: [O(1, [['owner', '"Maya"']], 'Account')], cls: { '1.owner': 'new' }, note: 'The owner is saved on the object' },
+      { line: 4, objs: A(0), cls: { '1.balance': 'new' }, note: '<code>balance</code> isn\'t a parameter because every account starts at 0' },
+      { line: 15, frame: null, vars: acct, hiObj: 1, note: '<code>acct</code> points to the new account' },
+      { line: 16, hiObj: 1, note: 'This deposits 50, so the account becomes <code>self</code> and 50 goes into <code>amount</code>' },
+      { line: 6, frame: { t: 'deposit', vars: [R('self', 1), VAL('amount', '50')] }, note: 'Inside <code>deposit</code>, <code>amount</code> is 50' },
+      { line: 7, objs: A(50), cls: { '1.balance': 'changed' }, note: '0 + 50 is 50' },
+      { line: 17, frame: null, hiObj: 1, note: 'Now we try to take out 20' },
+      { line: 9, frame: { t: 'withdraw', vars: [R('self', 1), VAL('amount', '20')] }, note: '<code>amount</code> is 20' },
+      { line: 10, lit: ['1.balance'], note: '20 isn\'t more than 50, so we go to the <code>else</code>' },
+      { line: 13, objs: A(30), cls: { '1.balance': 'changed' }, note: '50 - 20 is 30' },
+      { line: 18, frame: null, hiObj: 1, note: 'Now we try to take out 100' },
+      { line: 9, frame: { t: 'withdraw', vars: [R('self', 1), VAL('amount', '100')] }, note: '<code>amount</code> is 100' },
+      { line: 10, lit: ['1.balance'], note: '100 is more than 30' },
+      { line: 11, out: 'Not enough money', note: 'So it prints a message and doesn\'t touch the balance' },
+      { line: 19, frame: null, lit: ['1.balance'], out: '30', note: 'The account kept track of the balance after every call' }
+    ]
+  });
+})();
+
+/* ---------- Slide 19: list of objects ---------- */
+makeRunner($('s19run'), DOG_BARK + '\n\ndogs = [Dog("Rex", 3), Dog("Bella", 5), Dog("Luna", 1)]\n\nfor dog in dogs:\n    dog.bark()');
+
+/* ---------- Slide 20: common mistakes ---------- */
+(() => {
+  const M = [
+    { tab: 'Forgot self',
+      bad: 'class Dog:\n    def __init__(self, name):\n        self.name = name\n\n    def bark():\n        print("woof!")\n\nrex = Dog("Rex")\nrex.bark()',
+      good: 'class Dog:\n    def __init__(self, name):\n        self.name = name\n\n    def bark(self):\n        print("woof!")\n\nrex = Dog("Rex")\nrex.bark()',
+      why: '<code>rex.bark()</code> always passes <code>rex</code> in as <code>self</code>, but <code>bark()</code> doesn\'t have a parameter for it. Every method needs <code>self</code>, even if it doesn\'t use it.' },
+    { tab: 'Forgot self.',
+      bad: 'class Dog:\n    def __init__(self, name):\n        self.name = name\n\n    def bark(self):\n        print(name, "says woof!")\n\nrex = Dog("Rex")\nrex.bark()',
+      good: 'class Dog:\n    def __init__(self, name):\n        self.name = name\n\n    def bark(self):\n        print(self.name, "says woof!")\n\nrex = Dog("Rex")\nrex.bark()',
+      why: '<code>name</code> only existed inside the constructor. The name is saved on the object, so use <code>self.name</code>.' },
+    { tab: 'Missing argument',
+      bad: 'class Dog:\n    def __init__(self, name):\n        self.name = name\n\nrex = Dog()\nprint(rex.name)',
+      good: 'class Dog:\n    def __init__(self, name):\n        self.name = name\n\nrex = Dog("Rex")\nprint(rex.name)',
+      why: 'The constructor needs a name, so you have to give a name when you make the dog. You don\'t give <code>self</code> because Python fills it in.' },
+    { tab: 'Forgot ()',
+      bad: 'class Dog:\n    def __init__(self, name):\n        self.name = name\n\n    def bark(self):\n        print(self.name, "says woof!")\n\nrex = Dog("Rex")\nrex.bark',
+      good: 'class Dog:\n    def __init__(self, name):\n        self.name = name\n\n    def bark(self):\n        print(self.name, "says woof!")\n\nrex = Dog("Rex")\nrex.bark()',
+      why: 'Nothing happens because without the parentheses you\'re only naming the method, not calling it.' },
+    { tab: 'Printing an object',
+      bad: 'class Dog:\n    def __init__(self, name):\n        self.name = name\n\nrex = Dog("Rex")\nprint(rex)',
+      good: 'class Dog:\n    def __init__(self, name):\n        self.name = name\n\nrex = Dog("Rex")\nprint(rex.name)',
+      why: 'Python doesn\'t know what you want to see, so it prints the type and where the object is in memory. Print the attributes instead.' }
+  ];
+  let mi = 0;
+  const r = makeRunner($('s20run'), M[0].bad, [['Show fix', rr => { rr.setCode(M[mi].good); rr.run(); $('s20why').className = ''; $('s20why').innerHTML = M[mi].why; }]]);
+  makeTabs($('s20tabs'), M.map(m => m.tab), i => {
+    mi = i; r.orig = M[i].bad; r.setCode(M[i].bad);
+    $('s20why').className = 'muted'; $('s20why').textContent = 'Run the code, then press Show fix';
+  });
+})();
+
+/* ---------- Slide 21: recap ---------- */
+(() => {
+  const T = (t, bg) => `<span class="tag" style="background:${bg}">${t}</span>`;
+  const rows = [
+    ['class Dog:', T('class', '#fff2a8') + '<span>the blueprint for every dog</span>'],
+    ['    def __init__(self, name, age):', T('constructor', '#e6efff') + '<span>runs when a new dog is made</span>'],
+    ['        self.name = name', T('attribute', '#dff3e4') + '<span>a variable saved on the object</span>'],
+    ['        self.age = age', ''],
+    ['', ''],
+    ['    def bark(self):', T('method', '#ffd9a8') + '<span>a function every dog can use</span>'],
+    ['        print(self.name, "says woof!")', T('self', '#ebdffb') + '<span>the dog it\'s working on</span>'],
+    ['', ''],
+    ['rex = Dog("Rex", 3)', T('object', '#fde0e0') + '<span>a dog made from the class</span>'],
+    ['rex.bark()', '<span><code>rex</code> becomes <code>self</code></span>']
+  ];
+  $('s21code').innerHTML = hl(rows.map(r => r[0]).join('\n'));
+  $('s21legend').innerHTML = rows.filter(r => r[1]).map(([, a]) => { const m = a.match(/^(<span class="tag"[^>]*>.*?<\/span>)(.*)$/); return m ? `<span>${m[1]}</span>${m[2]}` : `<span><span class="tag" style="background:var(--code-bg)">${hl('rex.bark()')}</span></span>${a}`; }).join('');
+  $('s21recap').innerHTML = rows.map(([c, a], i) => `<div class="rc${i === 0 ? ' first' : ''}${i === rows.length - 1 ? ' last' : ''}">${hl(c) || ' '}</div><div class="ra">${a}</div>`).join('');
+})();
+
+/* ---------- Slide 22: practice ---------- */
+(() => {
+  const CH = [
+    { tab: 'Rectangle',
+      desc: '<code>__init__</code> should save <code>width</code> and <code>height</code>, and <code>area()</code> should return width times height.',
+      start: 'class Rectangle:\n    def __init__(self, width, height):\n        # your code here\n        pass\n\n    def area(self):\n        # your code here\n        pass',
+      hint: 'In <code>__init__</code> write <code>self.width = width</code>, then use <code>self.width</code> and <code>self.height</code> in <code>area</code>.',
+      tests: [
+        ['Rectangle(3, 4).area()', '_r = Rectangle(3, 4).area()', '12'],
+        ['Rectangle(5, 5).area()', '_r = Rectangle(5, 5).area()', '25'],
+        ['Rectangle(2, 7).width', '_r = Rectangle(2, 7).width', '2'],
+        ['Rectangle(2, 7).height', '_r = Rectangle(2, 7).height', '7']] },
+    { tab: 'Counter',
+      desc: 'Every counter starts at 0. <code>add()</code> should add 1 and <code>reset()</code> should set it back to 0.',
+      start: 'class Counter:\n    def __init__(self):\n        self.count = 0\n\n    def add(self):\n        # your code here\n        pass\n\n    def reset(self):\n        # your code here\n        pass',
+      hint: 'Use <code>self.count = self.count + 1</code>',
+      tests: [
+        ['new Counter, then count', 'c = Counter()\n_r = c.count', '0'],
+        ['add() 3 times, then count', 'c = Counter()\nc.add()\nc.add()\nc.add()\n_r = c.count', '3'],
+        ['add() 2 times, reset(), add() once, then count', 'c = Counter()\nc.add()\nc.add()\nc.reset()\nc.add()\n_r = c.count', '1'],
+        ['a.add() twice and b.add() once, then (a.count, b.count)', 'a = Counter()\nb = Counter()\na.add()\na.add()\nb.add()\n_r = (a.count, b.count)', '(2, 1)']] },
+    { tab: 'Student',
+      desc: '<code>add_grade()</code> should add a grade to the list and <code>average()</code> should return the average, or 0 if there aren\'t any grades.',
+      start: 'class Student:\n    def __init__(self, name):\n        self.name = name\n        self.grades = []\n\n    def add_grade(self, grade):\n        # your code here\n        pass\n\n    def average(self):\n        # your code here\n        return 0',
+      hint: 'Use <code>self.grades.append(grade)</code>. For the average, check if the list is empty first so you don\'t divide by 0.',
+      tests: [
+        ['add_grade(70), then grades', 's = Student("Ava")\ns.add_grade(70)\n_r = s.grades', '[70]'],
+        ['grades 90 and 80, average()', 's = Student("Ava")\ns.add_grade(90)\ns.add_grade(80)\n_r = s.average()', '85'],
+        ['no grades, average()', 's = Student("Ava")\n_r = s.average()', '0']] }
+  ];
+  const CHECK = `for _label, _code, _exp in TESTS:
+    try:
+        _ns = dict(globals())
+        exec(_code, _ns)
+        _v = _ns["_r"]
+        _got = repr(_v)
+        _ok = _v == eval(_exp)
+    except Exception as _e:
+        _got = type(_e).__name__ + ": " + str(_e)
+        _ok = False
+    print(("PASS" if _ok else "FAIL") + "\\t" + _label + "\\t" + _got + "\\t" + _exp)`;
+  let ci = 0;
+  const res = $('s22res');
+  const check = async rr => {
+    res.innerHTML = `<li class="muted">${pyReady ? 'Testing...' : 'Starting Python. The first run can take a few seconds...'}</li>`;
+    let py;
+    try { py = await loadPy(); } catch (e) { res.innerHTML = '<li class="err">Python could not start</li>'; return; }
+    const ns = py.globals.get('dict')();
+    ns.set('__name__', '__main__');
+    const a = await pyExec(py, ns, rr.cm.getValue());
+    showRes(rr.out, a);
+    if (a.err){ ns.destroy(); res.innerHTML = `<li class="err">Your code has an error:</li><li class="err" style="white-space:pre-wrap">${esc(a.err)}</li>`; return; }
+    const b = await pyExec(py, ns, CHECK.replace('TESTS', JSON.stringify(CH[ci].tests)));
+    ns.destroy();
+    const rows = b.text.split('\n').filter(Boolean).map(l => l.split('\t'));
+    const all = rows.length && rows.every(x => x[0] === 'PASS');
+    res.innerHTML = rows.map(([ok, ex, got, exp]) => ok === 'PASS'
+      ? `<li><span class="good">&#10003;</span> ${esc(ex)} gave ${esc(got)}</li>`
+      : `<li><span class="badt">&#10007;</span> ${esc(ex)} gave ${esc(got)} but should be ${esc(exp)}</li>`).join('')
+      + (all ? '<li class="good" style="margin-top:8px">All tests passed</li>' : '');
+  };
+  const r = makeRunner($('s22run'), CH[0].start, [['Hint', () => { $('s22hint').style.display = 'block'; }]]);
+  r.run = () => { r.out.innerHTML = '<span class="muted">Running...</span>'; return check(r); };
+  $('s22run').querySelector('.rst').remove();
+  CH.forEach(c => c.cur = c.start);
+  let first = true;
+  makeTabs($('s22tabs'), CH.map(c => c.tab), i => {
+    if (!first) CH[ci].cur = r.cm.getValue();
+    first = false; ci = i;
+    $('s22desc').innerHTML = CH[i].desc;
+    $('s22hint').innerHTML = CH[i].hint; $('s22hint').style.display = 'none';
+    r.orig = CH[i].start; r.setCode(CH[i].cur);
+    res.innerHTML = '<li class="muted">Press Run to test your class</li>';
+  });
+})();
+
+/* ---------- Navigation: bottom buttons (and arrow keys on a keyboard) ---------- */
+const slides = [...document.querySelectorAll('.slide')];
+let cur = 0;
+function show(n){
+  n = Math.max(0, Math.min(slides.length - 1, n));
+  slides[cur].classList.remove('active');
+  cur = n;
+  const s = slides[cur];
+  s.classList.add('active'); s.scrollTop = 0;
+  $('counter').textContent = `${cur + 1} / ${slides.length}`;
+  $('bar').style.width = ((cur + 1) / slides.length * 100) + '%';
+  $('prev').disabled = cur === 0; $('next').disabled = cur === slides.length - 1;
+  history.replaceState(null, '', '#' + (cur + 1));
+  s.querySelectorAll('.CodeMirror').forEach(e => e.CodeMirror.refresh());
+  drawArrows(s);
+}
+$('prev').onclick = () => show(cur - 1);
+$('next').onclick = () => show(cur + 1);
+document.addEventListener('keydown', e => {
+  const t = e.target;
+  if (t.closest && (t.closest('.CodeMirror') || t.matches('input,textarea,select'))) return;
+  if (e.key === 'ArrowRight' || e.key === 'PageDown'){ show(cur + 1); e.preventDefault(); }
+  else if (e.key === 'ArrowLeft' || e.key === 'PageUp'){ show(cur - 1); e.preventDefault(); }
+});
+// stop iOS Safari zooming on a fast double tap
+let lastTouch = 0;
+document.addEventListener('touchend', e => {
+  const now = Date.now();
+  if (now - lastTouch < 350 && !(e.target.closest && e.target.closest('input,textarea,.CodeMirror'))){
+    e.preventDefault();
+    const b = e.target.closest && e.target.closest('button');
+    if (b && !b.disabled) b.click();
+  }
+  lastTouch = now;
+}, { passive: false });
+document.addEventListener('gesturestart', e => e.preventDefault());
+show((parseInt(location.hash.slice(1)) || 1) - 1);
+if (document.fonts) document.fonts.ready.then(redrawVisible);
+window.addEventListener('load', () => setTimeout(() => loadPy().catch(() => {}), 1500));
+</script>
+</body>
+</html>
