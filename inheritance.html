@@ -1,0 +1,1205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Python Inheritance</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/runmode/runmode.min.js"></script>
+<style>
+:root{
+  --ink:#111;--muted:#666;--line:#d4d4d4;--code-bg:#f6f7f9;
+  --accent:#1a5fd0;--accent-soft:#e6efff;--hl:#fff2a8;
+  --ok:#1e7e34;--ok-soft:#dff3e4;--bad:#c62828;--bad-soft:#fde0e0;--orange:#ffd9a8;
+  --fs:clamp(18px,1.15vw + 7px,30px);--cfs:clamp(15px,0.95vw + 5px,26px);
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --navh:56px;
+}
+*{box-sizing:border-box;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html,body{margin:0;height:100%;background:#fff;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden}
+.slide{position:fixed;top:0;left:0;right:0;bottom:calc(var(--navh) + env(safe-area-inset-bottom,0px));overflow-y:auto;overflow-x:hidden;padding:40px 48px 20px;display:none;flex-direction:column}
+.slide.active{display:flex}
+.inner{width:100%;max-width:min(1500px,100%);margin:0 auto}
+#s1 .inner{margin:auto}
+h1{font-size:clamp(28px,2.3vw + 10px,56px);margin:0 0 28px;line-height:1.15}
+p{font-size:var(--fs);line-height:1.5;margin:0 0 24px;max-width:72ch;text-wrap:pretty}
+code,.ic{font-family:var(--mono)}
+p code,li code,.note code,.hint code,.legend code,.card code,.ra code{background:var(--code-bg);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:.88em}
+.code{font-family:var(--mono);font-size:var(--cfs);line-height:1.6;background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:14px 18px;white-space:pre;overflow-x:auto;margin:0 0 28px}
+.code.big{font-size:calc(var(--cfs)*1.15)}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:44px;align-items:start}
+.btn{font:inherit;font-size:18px;padding:8px 16px;border:1.5px solid var(--ink);background:#fff;color:var(--ink);border-radius:6px;cursor:pointer}
+.btn:hover{background:#f0f0f0}
+.btn.primary{background:var(--ink);color:#fff}
+.btn.primary:hover{background:#333}
+.btn:disabled{opacity:.35;cursor:default}
+.btn.mono{font-family:var(--mono);font-size:calc(var(--cfs)*.85)}
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:4px 0 12px}
+.label{font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:0 0 8px}
+.out{font-family:var(--mono);font-size:var(--cfs);background:#fff;border:1.5px solid var(--ink);border-radius:8px;padding:12px 16px;white-space:pre-wrap;word-break:break-word;margin:0 0 24px}
+.err{color:var(--bad)}
+.muted{color:var(--muted)}
+.note{font-size:var(--fs);line-height:1.45;margin:16px 0 0;max-width:62ch}
+.chip{display:inline-block;font-family:var(--mono);font-size:var(--cfs);background:var(--accent-soft);border:1px solid #b9cdf5;border-radius:6px;padding:2px 10px;margin:3px 6px 3px 0}
+@keyframes pop{from{transform:scale(.85);opacity:0}to{transform:none;opacity:1}}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+.good{color:var(--ok);font-weight:700}
+.badt{color:var(--bad);font-weight:700}
+
+/* nav */
+.nav{position:fixed;left:0;right:0;bottom:0;height:calc(var(--navh) + env(safe-area-inset-bottom,0px));padding:0 18px env(safe-area-inset-bottom,0px);border-top:1px solid #e5e5e5;display:flex;align-items:center;justify-content:space-between;background:#fff;z-index:10}
+.nav .right{display:flex;gap:10px;align-items:center}
+#counter{font-size:16px;color:var(--muted);min-width:64px;text-align:center}
+#pystat{font-size:14px}
+.bar{position:fixed;left:0;bottom:calc(var(--navh) + env(safe-area-inset-bottom,0px));height:3px;background:var(--ink);transition:width .3s;z-index:10}
+
+/* code editor */
+.runner .CodeMirror{height:auto;font-family:var(--mono);font-size:var(--cfs);line-height:1.55;border:1px solid var(--line);border-radius:8px;background:var(--code-bg)}
+.runner .CodeMirror-gutters{background:var(--code-bg);border-right:1px solid var(--line)}
+.runner .CodeMirror-scroll{min-height:3em}
+.runner .CodeMirror pre.CodeMirror-line{padding-left:10px}
+.runner .out{min-height:3.2em}
+.CodeMirror textarea{font-size:16px}
+
+/* stepper */
+.stepper{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:44px;align-items:start}
+.stepcode{padding:10px 0}
+.ln{display:flex;padding:0 14px 0 4px;transition:background .2s}
+.ln .num{width:2em;color:#aaa;text-align:right;padding-right:6px;flex:none;user-select:none}
+.ln .arr{width:1.4em;flex:none;color:var(--accent);text-align:center}
+.ln .txt{white-space:pre}
+.ln.cur{background:var(--hl)}
+.ln.cur .arr::before{content:"\25B6"}
+.ln.mark{background:var(--accent-soft)}
+.cnt{font-size:16px}
+.stepper .controls{margin:6px 0 20px}
+.stepper .note{margin-top:0;min-height:2.9em}
+.stepper .out{min-height:3.2em}
+.mem{border:2px dashed var(--line);border-radius:10px;padding:14px 18px;margin-bottom:22px;min-height:3.2em}
+.mem .empty{color:#aaa;font-size:16px}
+
+/* memory: variables on the left, objects on the right, arrows between */
+.mem2{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px 64px;align-items:start}
+.mh{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:0 0 8px}
+.mvars,.mobjs{display:flex;flex-direction:column;gap:12px;min-width:0}
+.mobjs{gap:16px}
+.vrow{display:flex;align-items:center;gap:12px;min-height:36px}
+.vrow .vn{font-family:var(--mono);font-weight:700;font-size:var(--cfs)}
+.vrow .chip{margin:0}
+.ref{width:18px;height:18px;border-radius:50%;background:var(--c);flex:none;box-shadow:0 0 0 4px var(--cs)}
+.frame{border:2px dashed #9a9a9a;border-radius:10px;padding:6px 14px 8px;background:#fafafa;animation:fadein .3s}
+.frame .ft{font-size:14px;color:var(--muted);margin-bottom:2px}
+.frame .ft code{font-family:var(--mono);color:var(--ink)}
+.obj{border:2.5px solid var(--c);border-radius:12px;background:#fff;padding:6px 14px 10px;min-width:min(210px,100%);max-width:100%;transition:box-shadow .25s}
+.obj .oh{font-size:13px;font-weight:700;color:var(--c);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.obj.new{animation:flash 1.2s}
+.obj.hi{box-shadow:0 0 0 6px var(--cs)}
+@keyframes flash{from{background:var(--cs)}to{background:#fff}}
+.arow{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center;margin-top:6px;border-radius:6px;padding:2px 4px}
+.an{font-family:var(--mono);font-size:var(--cfs);color:#333}
+.av{font-family:var(--mono);font-size:var(--cfs);border:1.5px solid var(--line);border-radius:6px;padding:2px 10px;background:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;justify-self:start;max-width:100%}
+.arow.new{background:var(--ok-soft)}
+.arow.changed .av{background:var(--hl);outline:2px solid #e0c200}
+.av.lit{outline:3px solid #e0c200;background:var(--hl)}
+.oempty{color:#999;font-size:15px;padding:6px 2px 0}
+svg.arrows{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
+
+/* title */
+#s1 .inner{text-align:center}
+#s1 h1{font-size:clamp(44px,6vw,90px);margin-bottom:34px}
+.t-demo{display:flex;align-items:center;gap:22px;flex-wrap:wrap;justify-content:center;text-align:left}
+.t-expr{font-family:var(--mono);font-size:calc(var(--cfs)*1.15);border-radius:8px;padding:10px 16px;text-align:center;background:var(--code-bg);border:1px solid var(--line);min-width:9.5em}
+.t-arrow{font-size:28px;color:var(--muted)}
+#s1obj{min-width:240px;min-height:130px;display:flex;align-items:center}
+#s1obj .obj{animation:pop .4s}
+
+/* legend (writing slides) */
+.s{background:var(--hl);border-radius:4px;padding:0 3px;font-weight:700}
+.k{background:var(--accent-soft);border-radius:4px;padding:0 3px}
+.v{background:var(--orange);border-radius:4px;padding:0 3px}
+.g{background:var(--ok-soft);border-radius:4px;padding:0 3px}
+.legend{display:grid;grid-template-columns:auto 1fr;gap:16px 20px;align-items:baseline;margin:0 0 24px;font-size:var(--fs);line-height:1.4}
+.legend .sw{font-family:var(--mono);font-size:var(--cfs);text-align:center;padding:1px 8px;border-radius:4px;white-space:nowrap}
+
+/* slide 2: built-in objects */
+.bobj{border:2.5px solid var(--ink);border-radius:12px;padding:10px 16px 12px;margin:0 0 14px}
+.bobj .oh{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+.bobj .sval{font-family:var(--mono);font-size:calc(var(--cfs)*1.2)}
+.mrow{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+.lst{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.cell{display:flex;flex-direction:column;align-items:center}
+.cell .idx{font-family:var(--mono);font-size:15px;color:var(--muted);min-height:1.6em}
+.cell .box{font-family:var(--mono);font-size:var(--cfs);border:2px solid var(--ink);border-radius:6px;padding:7px 13px;min-width:56px;text-align:center;background:#fff}
+.cell.new .box{animation:pop .35s;background:var(--ok-soft)}
+.defs2{font-size:var(--fs);line-height:1.5;margin:8px 0 0;padding-left:1.2em;max-width:72ch}
+.defs2 li{margin:0 0 12px}
+
+/* slide 4: blueprint */
+.bp{color:#fff;border-radius:14px;padding:16px 22px;background:#1f4e99;background-image:linear-gradient(rgba(255,255,255,.09) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.09) 1px,transparent 1px);background-size:22px 22px;font-size:var(--fs);line-height:1.5}
+.bp .bt{font-family:var(--mono);font-size:calc(var(--cfs)*1.3);font-weight:700;margin-bottom:6px}
+.bp .brow{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;margin-top:8px}
+.bp .bs{font-size:14px;text-transform:uppercase;letter-spacing:.08em;opacity:.75;min-width:9.5em}
+.bp .bi{font-family:var(--mono);font-size:var(--cfs);display:inline-block;border:1.5px dashed rgba(255,255,255,.7);border-radius:6px;padding:1px 10px}
+.yard{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start;min-height:150px}
+.ocard{position:relative;animation:fly .55s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes fly{from{transform:translateX(-120px) scale(.4);opacity:0}to{transform:none;opacity:1}}
+.ocard .btn{font-size:17px;padding:5px 14px;margin-top:10px;font-family:var(--mono)}
+.bubble{position:absolute;left:50%;top:-14px;transform:translate(-50%,-100%);background:var(--ink);color:#fff;font-size:16px;border-radius:10px;padding:6px 12px;white-space:nowrap;animation:pop .3s}
+.bubble::after{content:"";position:absolute;left:50%;bottom:-7px;margin-left:-7px;border:7px solid transparent;border-bottom:0;border-top-color:var(--ink)}
+.yard-empty{color:#aaa;font-size:17px;padding-top:12px}
+
+/* cards */
+.card{border:2px solid var(--line);border-radius:12px;padding:16px 20px;font-size:var(--fs);line-height:1.45}
+.card h3{font-family:var(--mono);font-size:calc(var(--cfs)*1.1);margin:0 0 8px}
+
+/* slide 9: argument matching */
+.match{display:inline-grid;max-width:100%;overflow-x:auto;grid-template-columns:repeat(5,auto);gap:4px 14px;align-items:center;font-family:var(--mono);font-size:var(--cfs);margin:4px 0 28px;justify-items:center}
+.match .lab{justify-self:end;color:#333}
+.match .slot{border:2px solid var(--line);border-radius:8px;padding:4px 12px;background:#fff;transition:background .3s,border-color .3s}
+.match .slot.ghost{border-style:dashed;color:var(--muted);font-family:system-ui,sans-serif;font-size:calc(var(--cfs)*.85)}
+.match .dn{color:#bbb;font-size:22px;transition:color .3s}
+.match .on{background:var(--hl);border-color:#e0c200}
+.match .dn.on{background:none;color:var(--ink)}
+
+/* slide 11: self */
+.opill{display:inline-block;font-family:system-ui,sans-serif;font-size:.85em;font-weight:700;color:#fff;background:var(--c);border-radius:20px;padding:1px 12px}
+.trans{display:grid;grid-template-columns:auto auto auto;justify-content:start;gap:14px 16px;align-items:center;font-family:var(--mono);font-size:var(--cfs);margin:0 0 26px}
+.trans .ar{color:var(--muted)}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.tab{font:inherit;font-size:17px;padding:7px 14px;border:1.5px solid var(--ink);background:#fff;border-radius:6px;cursor:pointer}
+.tab.on{background:var(--ink);color:#fff}
+.tab.mono{font-family:var(--mono)}
+.say{border-left:5px solid var(--accent);background:var(--accent-soft);padding:14px 20px;border-radius:0 10px 10px 0;font-size:var(--fs);line-height:1.5;max-width:72ch;margin:6px 0 0}
+
+/* slide 15: barking */
+.pack{display:flex;gap:22px;flex-wrap:wrap;margin:26px 0 26px;padding-top:30px}
+.scard{position:relative}
+.scard .vl{font-family:var(--mono);font-weight:700;font-size:var(--cfs);margin-bottom:6px}
+.selftag{position:absolute;right:-8px;top:-30px;background:var(--hl);border:2px solid #e0c200;font-family:var(--mono);font-weight:700;font-size:16px;border-radius:8px;padding:2px 10px;display:none}
+.scard.on .selftag{display:block;animation:pop .35s}
+.scard.on .obj{box-shadow:0 0 0 6px var(--cs)}
+.becomes{display:grid;grid-template-columns:auto 1fr;gap:10px 18px;align-items:center;font-size:var(--fs);margin:0 0 20px}
+.becomes .code{margin:0;padding:8px 14px}
+.becomes .lit2{background:var(--hl);border-radius:4px;padding:0 3px}
+
+/* recap */
+.recap{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:28px;align-items:stretch;margin:0 0 28px}
+.recap .rc{font-family:var(--mono);font-size:var(--cfs);white-space:pre;background:var(--code-bg);padding:3px 18px;border-left:1px solid var(--line);border-right:1px solid var(--line);line-height:1.6}
+.recap .rc.first{border-top:1px solid var(--line);border-radius:8px 8px 0 0;padding-top:12px}
+.recap .rc.last{border-bottom:1px solid var(--line);border-radius:0 0 8px 8px;padding-bottom:12px}
+.recap .ra{font-size:calc(var(--fs)*.85);display:flex;align-items:center;gap:10px;color:#333}
+.tag{font-family:var(--mono);font-size:.85em;font-weight:700;border-radius:5px;padding:1px 8px;white-space:nowrap}
+
+/* mistakes + practice */
+.results{list-style:none;padding:0;margin:8px 0 0;font-family:var(--mono);font-size:var(--cfs)}
+.results li{padding:4px 0;word-break:break-word}
+.results li.muted{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:17px}
+.hint{font-size:var(--fs);border-left:5px solid #e0c200;background:#fffbe6;padding:10px 16px;margin:18px 0 0;display:none;max-width:62ch;line-height:1.45}
+.noteright .note{min-height:4.4em;margin:0 0 18px}
+#s22run .CodeMirror{background:#fff;border:1.5px solid var(--ink)}
+#s22run .CodeMirror-gutters{background:#fff}
+
+@media (max-height:780px) and (min-width:901px){
+  :root{--fs:clamp(17px,0.85vw + 7px,26px);--cfs:clamp(14px,0.75vw + 5px,22px)}
+  .slide{padding-top:24px;padding-bottom:12px}
+  .say{padding:10px 18px}
+  .legend{gap:10px 18px;margin-bottom:18px}
+  .defs2 li{margin-bottom:8px}
+  h1{margin-bottom:20px}
+  .slide p{margin-bottom:18px}
+  .code{margin-bottom:20px}
+  .mem{margin-bottom:16px;padding:10px 14px}
+  .stepper .controls{margin:4px 0 14px}
+}
+@media (max-width:900px){
+  .two,.stepper{grid-template-columns:minmax(0,1fr);gap:24px}
+  .slide{padding:24px 16px 28px}
+  .mem2{gap:10px 40px}
+}
+.tch,#s21code,#s21legend{display:none}
+@media (hover:none) and (pointer:coarse){ .kb{display:none} .tch{display:inline} }
+@media (max-width:600px){
+  #s21recap{display:none}
+  #s21code,#s21legend{display:grid}
+  #s21code{display:block}
+  #s21legend{grid-template-columns:auto 1fr;gap:10px 12px;align-items:center}
+  .legend{grid-template-columns:minmax(0,1fr);gap:4px}
+  .legend .sw{justify-self:start;margin-top:10px}
+  #s21legend{grid-template-columns:auto minmax(0,1fr);gap:10px 12px}
+  #s21legend .tag{display:inline-block}
+  :root{--fs:17px;--cfs:14px;--navh:60px}
+  h1{font-size:28px;margin-bottom:16px}
+  #s1 h1{font-size:48px}
+  .code{padding:10px 12px}
+  .btn{font-size:17px;padding:9px 14px}
+  #pystat{display:none}
+  .nav{padding-left:12px;padding-right:12px}
+  .nav .right{width:100%;justify-content:space-between}
+  .t-arrow{transform:rotate(90deg)}
+  .t-demo{flex-direction:column;gap:10px}
+  .code,.ln .txt{white-space:pre-wrap;word-break:break-word}
+  .ln .txt{min-width:0}
+  .mem2{gap:10px 30px}
+  .recap{grid-template-columns:minmax(0,1fr)}
+  .recap .ra{padding:2px 0 10px 4px}
+  .recap .ra:empty{display:none}
+  .recap .rc{white-space:pre-wrap}
+  .recap .rc{border-radius:8px;border:1px solid var(--line)}
+  .trans{grid-template-columns:auto;gap:4px}
+  .trans .ar{transform:rotate(90deg);justify-self:start;margin-left:20px}
+  .becomes{grid-template-columns:minmax(0,1fr)}
+}
+
+/* ---------- inheritance ---------- */
+.smallcode .stepcode{font-size:calc(var(--cfs)*.85);line-height:1.45}
+.frame + .frame{margin-top:10px}
+.frame .ft b{color:var(--ink)}
+
+.smallcode .runner .CodeMirror{font-size:calc(var(--cfs)*.85);line-height:1.5}
+#s16 .stepcode{font-size:calc(var(--cfs)*.78);line-height:1.4}
+#s21 .recap .rc{font-size:calc(var(--cfs)*.85);line-height:1.45}
+#s21 .recap .ra{font-size:calc(var(--fs)*.8)}
+.runner .rextra > :first-child{margin-top:4px}
+
+/* class tree: parent on top, children underneath */
+.tree{--tg:28px;max-width:720px;text-align:left}
+.tree .trow1{display:flex;justify-content:center}
+.tree .trow1 .bp{width:min(100%,360px)}
+.tree .tconn{position:relative;height:40px;margin:0 calc((100% - var(--tg))/4)}
+.tree .tconn::before{content:"";position:absolute;left:50%;top:0;height:50%;border-left:3px solid #9a9a9a;margin-left:-1.5px}
+.tree .tconn::after{content:"";position:absolute;left:0;right:0;top:50%;bottom:0;border:3px solid #9a9a9a;border-bottom:0;border-radius:10px 10px 0 0}
+.tree .trow2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--tg)}
+.tree .bp{padding:12px 16px 14px;transition:opacity .25s,box-shadow .25s}
+.tree .bp .bt{font-size:calc(var(--cfs)*1.1)}
+.tree .bp .bs{min-width:0}
+.bp.look{box-shadow:0 0 0 6px #e0c200}
+.bp.found{box-shadow:0 0 0 6px #3fae5a}
+.bp.miss{opacity:.4}
+.bp .bi{transition:background .2s,color .2s}
+.bp .bi.hit{background:var(--hl);color:#111;border-style:solid;border-color:#e0c200}
+.bp .inh{opacity:0;transition:opacity .6s}
+.bp .inh.on{opacity:.8}
+#s1 .tree{margin:0 auto}
+
+/* is a / has a */
+.isa{display:grid;gap:12px;max-width:1150px}
+.isa .q{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px 12px;align-items:center;border:2px solid var(--line);border-radius:12px;padding:10px 16px;font-size:var(--fs);line-height:1.4}
+.isa .q .pair{font-weight:700}
+.isa .q .ans{grid-column:1/-1;display:none}
+.isa .q.done .ans{display:block;animation:fadein .3s}
+.isa .q.done{border-color:var(--ok);background:#f4fbf6}
+.isa .q .btn.yes{background:var(--ok);border-color:var(--ok);color:#fff}
+.isa .q .btn.no{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
+
+@media (max-height:780px) and (min-width:901px){
+  .tree .tconn{height:28px}
+  .isa{gap:8px}
+  .isa .q{padding:7px 14px}
+}
+@media (max-width:900px){
+  .isa .q{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .isa .q .pair{grid-column:1/-1}
+}
+@media (max-width:600px){
+  .tree{--tg:12px}
+  .tree .bp{padding:10px 10px 12px}
+  .tree .bp .bt{font-size:var(--cfs)}
+  .tree .bp .bs{font-size:12px;width:100%}
+}
+</style>
+</head>
+<body class="cm-s-default">
+
+<!-- 1 -->
+<section class="slide" id="s1"><div class="inner">
+  <h1>Inheritance</h1>
+  <div id="s1tree"></div>
+  <p class="muted hint-nav" style="margin:40px auto 0;font-size:18px"><span class="kb">Use the arrow keys or the buttons at the bottom to move between slides</span><span class="tch">Use the buttons at the bottom to move between slides</span></p>
+</div></section>
+
+<!-- 2 -->
+<section class="slide" id="s2"><div class="inner">
+  <h1>Last week's Dog class</h1>
+  <p>Last week we wrote a <code>Dog</code> class. Every dog has a name and an age, and it can have a birthday and bark. Run it to remind yourself how it works.</p>
+  <div id="s2run"></div>
+</div></section>
+
+<!-- 3 -->
+<section class="slide" id="s3"><div class="inner">
+  <h1>Now we want cats too</h1>
+  <p>A cat also has a name and an age, and it can have a birthday. The only difference is that it meows instead of barking.</p>
+  <div class="two">
+    <div><div class="code stepcode" id="s3dog"></div></div>
+    <div><div class="code stepcode" id="s3cat"></div></div>
+  </div>
+  <div class="controls"><button class="btn primary" id="s3btn">Show what's the same</button></div>
+  <p id="s3note" style="visibility:hidden">Most of <code>Cat</code> is copied from <code>Dog</code>. If we want to change how birthdays work, we have to remember to change it in both classes, and it gets worse with every new animal we add.</p>
+</div></section>
+
+<!-- 4 -->
+<section class="slide" id="s4"><div class="inner">
+  <h1>Inheritance</h1>
+  <p>Instead of copying, we can put the shared code in one class called <code>Pet</code>. Then we tell Python that a <code>Dog</code> is a <code>Pet</code> and a <code>Cat</code> is a <code>Pet</code>, and they both get everything <code>Pet</code> has. This is called <b>inheritance</b>.</p>
+  <div class="two">
+    <div id="s4tree"></div>
+    <ul class="defs2" style="margin-top:0">
+      <li><code>Pet</code> is the <b>parent class</b></li>
+      <li><code>Dog</code> and <code>Cat</code> are <b>child classes</b></li>
+      <li>A child class <b>inherits</b> every attribute and method from its parent</li>
+      <li>A child class can also add things of its own, like <code>bark</code></li>
+    </ul>
+  </div>
+</div></section>
+
+<!-- 5 -->
+<section class="slide" id="s5"><div class="inner">
+  <h1>Writing a child class</h1>
+  <p>To make a child class, put the parent's name in parentheses after the class name</p>
+  <div class="two">
+    <div><div class="code" id="s5code"></div></div>
+    <div>
+      <div class="legend">
+        <span class="sw s">(Pet)</span><span>The parent class. This is the only new thing you have to write.</span>
+        <span class="sw k">Dog</span><span>The child class. It gets <code>__init__</code> and <code>birthday</code> from <code>Pet</code>.</span>
+        <span class="sw g">bark</span><span>Only write what's new. Everything else comes from <code>Pet</code>.</span>
+      </div>
+      <p>Cat works the same way</p>
+      <div class="code" id="s5cat"></div>
+    </div>
+  </div>
+</div></section>
+
+<!-- 6 -->
+<section class="slide smallcode" id="s6"><div class="inner">
+  <h1>Making an object from a child class</h1>
+  <p><code>Dog</code> only has a <code>bark</code> method, but we can still make a dog with a name and an age</p>
+  <div id="s6step"></div>
+</div></section>
+
+<!-- 7 -->
+<section class="slide" id="s7"><div class="inner">
+  <h1>How Python finds a method</h1>
+  <p>When you call a method, Python looks in the object's own class first. If the method isn't there, it looks in the parent class. Pick an object and call a method to see where Python finds it.</p>
+  <div class="two">
+    <div>
+      <div class="tabs" id="s7tabs"></div>
+      <div class="controls" id="s7btns"></div>
+      <div class="say" id="s7say" style="min-height:4.2em;margin-bottom:22px"></div>
+      <div class="label">Output</div>
+      <pre class="out" id="s7out" style="min-height:3.2em"></pre>
+    </div>
+    <div id="s7tree"></div>
+  </div>
+  <p style="margin-top:8px">Inheritance only goes one way. A <code>Dog</code> gets everything from <code>Pet</code>, but a <code>Pet</code> doesn't get <code>bark</code> from <code>Dog</code>.</p>
+</div></section>
+
+<!-- 8 -->
+<section class="slide smallcode" id="s8"><div class="inner">
+  <h1>Overriding a method</h1>
+  <p>A child class can write its own version of a method the parent already has. This is called <b>overriding</b>. Python looks in the child class first, so the child's version is the one that runs.</p>
+  <div id="s8run"></div>
+  <ul class="defs2" id="s8side">
+      <li><code>Dog</code> has its own <code>speak</code>, so <code>rex.speak()</code> uses that one</li>
+      <li><code>Fish</code> doesn't, so <code>nemo.speak()</code> uses the one from <code>Pet</code></li>
+      <li>The method needs the same name as the parent's. If the name is different, it's a new method and nothing gets replaced.</li>
+      <li>Try giving <code>Fish</code> its own <code>speak</code> method</li>
+  </ul>
+</div></section>
+
+<!-- 9 -->
+<section class="slide" id="s9"><div class="inner">
+  <h1>A child class with its own attributes</h1>
+  <div class="two">
+    <div>
+      <p>Say every dog also has a breed. <code>Dog</code> needs its own constructor to save it.</p>
+      <p>The problem is that <code>Dog</code>'s constructor overrides <code>Pet</code>'s. <code>Pet</code>'s constructor never runs, so the name and age never get saved.</p>
+      <p>We could copy those two lines into <code>Dog</code>, but then we're back to copying code. Run the code to see what happens, then press <b>Fix it</b>.</p>
+    </div>
+    <div id="s9run"></div>
+  </div>
+</div></section>
+
+<!-- 10 -->
+<section class="slide" id="s10"><div class="inner">
+  <h1>super()</h1>
+  <p><code>super()</code> lets a child class use the parent's version of a method. Here it runs <code>Pet</code>'s constructor so we don't have to copy it.</p>
+  <div class="code big" id="s10code"></div>
+  <div class="legend">
+    <span class="sw s">super()</span><span>The parent class. For <code>Dog</code>, that's <code>Pet</code>.</span>
+    <span class="sw k">.__init__</span><span>Runs the parent's constructor on the same object</span>
+    <span class="sw v">name, age</span><span>The values <code>Pet</code>'s constructor needs. You don't pass <code>self</code> because Python fills it in.</span>
+    <span class="sw g">self.breed = breed</span><span>Then <code>Dog</code> saves the part that's new</span>
+  </div>
+  <p>A parent class is also called a superclass, which is where the name <code>super</code> comes from</p>
+</div></section>
+
+<!-- 11 -->
+<section class="slide" id="s11"><div class="inner">
+  <h1>How a Dog with a breed is made</h1>
+  <p>Both constructors run, one inside the other. They both work on the same object.</p>
+  <div id="s11step"></div>
+</div></section>
+
+<!-- 12 -->
+<section class="slide smallcode" id="s12"><div class="inner">
+  <h1>Adding to a parent's method</h1>
+  <p><code>super()</code> works with any method, not only the constructor. Here <code>Dog</code>'s <code>describe</code> runs <code>Pet</code>'s version first and then prints one more line.</p>
+  <div id="s12run"></div>
+  <ul class="defs2" id="s12side">
+    <li>To replace a parent's method, write it again in the child class</li>
+    <li>To add on to it, write it again and call the parent's version inside with <code>super()</code></li>
+    <li>Try deleting the <code>super().describe()</code> line and running it again</li>
+  </ul>
+</div></section>
+
+<!-- 13 -->
+<section class="slide" id="s13"><div class="inner">
+  <h1>A Dog is a Pet</h1>
+  <p>Every <code>Dog</code> is also a <code>Pet</code>, because <code>Dog</code> inherits from <code>Pet</code>. <code>isinstance</code> tells you if an object belongs to a class. Click the buttons to try it.</p>
+  <div class="two">
+    <div>
+      <div class="code" id="s13code"></div>
+      <div class="mrow" id="s13btns"></div>
+      <pre class="out" id="s13out" style="min-height:3.2em"><span class="muted">Click a button</span></pre>
+      <p id="s13why" class="muted">&nbsp;</p>
+    </div>
+    <div class="pack" id="s13pack" style="margin:0;padding-top:0"></div>
+  </div>
+</div></section>
+
+<!-- 14 -->
+<section class="slide smallcode" id="s14"><div class="inner">
+  <h1>Different objects in one list</h1>
+  <p>A list can hold dogs, cats and fish together. The loop calls <code>speak</code> on each one, and each object uses the version from its own class. Try adding a <code>Bird</code> class and putting a bird in the list.</p>
+  <div id="s14run"></div>
+</div></section>
+
+<!-- 15 -->
+<section class="slide" id="s15"><div class="inner">
+  <h1>When to use inheritance</h1>
+  <p>Use inheritance when one thing <b>is a</b> kind of the other. If one thing only <b>has</b> the other, use an attribute instead. Pick the sentence that sounds right for each pair.</p>
+  <div class="isa" id="s15q"></div>
+</div></section>
+
+<!-- 16 -->
+<section class="slide smallcode" id="s16"><div class="inner">
+  <h1>Savings account example</h1>
+  <p>A savings account is an account that also earns interest</p>
+  <div id="s16step"></div>
+</div></section>
+
+<!-- 17 -->
+<section class="slide" id="s17"><div class="inner">
+  <h1>Common mistakes</h1>
+  <p>Run the code to see what happens, then press <b>Show fix</b></p>
+  <div class="tabs" id="s17tabs"></div>
+  <div class="two">
+    <div><div id="s17run"></div></div>
+    <div><div class="label">Why</div><p id="s17why" class="muted">Run the code, then press Show fix</p></div>
+  </div>
+</div></section>
+
+<!-- 18 -->
+<section class="slide" id="s21"><div class="inner">
+  <h1>Review</h1>
+  <div class="recap" id="s21recap"></div>
+  <div class="code" id="s21code"></div>
+  <div class="legend" id="s21legend"></div>
+  <p>Remember that Python looks in the object's own class first and then in the parent class</p>
+</div></section>
+
+<!-- 19 -->
+<section class="slide" id="s22"><div class="inner">
+  <h1>Practice</h1>
+  <p>Pick a task, write the child class, and press <b>Run</b> to test it</p>
+  <div class="tabs" id="s22tabs"></div>
+  <p id="s22desc"></p>
+  <div class="two">
+    <div><div class="label">Write your code here</div><div id="s22run"></div></div>
+    <div><div class="label">Tests</div><ul class="results" id="s22res"><li class="muted">Press Run to test your class</li></ul><div class="hint" id="s22hint"></div></div>
+  </div>
+</div></section>
+
+<div class="bar" id="bar"></div>
+<div class="nav">
+  <span id="pystat" class="muted">Python: not loaded yet</span>
+  <div class="right">
+    <button class="btn" id="prev">&#9664; Back</button>
+    <span id="counter"></span>
+    <button class="btn primary" id="next">Next &#9654;</button>
+  </div>
+</div>
+
+<script>
+/* ---------- helpers ---------- */
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const $ = id => document.getElementById(id);
+
+function hl(text){
+  let html = '';
+  CodeMirror.runMode(text, 'python', (tok, style) => {
+    const t = esc(tok);
+    html += style ? `<span class="${style.split(' ').map(s => 'cm-' + s).join(' ')}">${t}</span>` : t;
+  });
+  return html;
+}
+const chip = v => `<span class="chip">${hl(v)}</span>`;
+function codeLines(code, marks = []){
+  return code.split('\n').map((l, i) => `<div class="ln${marks.includes(i + 1) ? ' mark' : ''}"><span class="num">${i + 1}</span><span class="arr"></span><span class="txt">${hl(l) || ' '}</span></div>`).join('');
+}
+function makeTabs(el, names, onSel, mono){
+  el.innerHTML = '';
+  names.forEach((n, i) => { const b = document.createElement('button'); b.className = 'tab' + (mono ? ' mono' : ''); b.textContent = n; b.onclick = () => sel(i); el.appendChild(b); });
+  function sel(i){ [...el.children].forEach((b, k) => b.classList.toggle('on', k === i)); onSel(i); }
+  sel(0);
+}
+
+/* ---------- objects + memory pictures ---------- */
+const OC = ['#1a5fd0', '#d9730d', '#1e7e34', '#7b3fc4'];
+const OS = ['#dce8ff', '#fde6cf', '#d6f0dc', '#ebdffb'];
+const cvars = id => `--c:${OC[(id - 1) % 4]};--cs:${OS[(id - 1) % 4]}`;
+
+/* o = { id, cls, attrs: [[name, repr], ...] }   st = highlight info */
+function objHTML(o, st = {}, head){
+  const rows = o.attrs.map(([n, v]) => {
+    const key = o.id + '.' + n;
+    const c = (st.cls && st.cls[key]) || '';
+    const lit = st.lit && st.lit.includes(key) ? ' lit' : '';
+    return `<div class="arow ${c}"><span class="an">${esc(n)}</span><span class="av${lit}">${hl(v)}</span></div>`;
+  }).join('');
+  const cls = (st.hiObj === o.id ? ' hi' : '') + (st.newObj === o.id ? ' new' : '');
+  return `<div class="obj${cls}" data-id="${o.id}" style="${cvars(o.id)}"><div class="oh">${esc(head || (o.cls || 'Dog') + ' object')}</div>${rows || '<div class="oempty">(no attributes yet)</div>'}</div>`;
+}
+function varHTML(v){
+  return `<div class="vrow"><span class="vn">${esc(v.n)}</span>${v.ref ? `<span class="ref" data-ref="${v.ref}" style="${cvars(v.ref)}"></span>` : chip(v.v)}</div>`;
+}
+/* st.vars = [{n, ref} or {n, v}], st.frames = [{label, vars}], st.objs = [obj] */
+function memHTML(st){
+  const vars = (st.vars || []).map(varHTML).join('');
+  const frame = (st.frames || []).map(f => `<div class="frame"><div class="ft">${f.label}</div>${f.vars.map(varHTML).join('')}</div>`).join('');
+  const objs = (st.objs || []).map(o => objHTML(o, st)).join('');
+  if (!vars && !frame && !objs) return '';
+  return `<div class="mem2"><div class="mvars"><div class="mh">Variables</div>${vars}${frame}</div><div class="mobjs"><div class="mh">Objects</div>${objs}</div><svg class="arrows"></svg></div>`;
+}
+/* draw arrows from each variable dot to the object it refers to */
+function drawArrows(root){
+  root.querySelectorAll('.mem2').forEach(m => {
+    const svg = m.querySelector('svg.arrows');
+    const R = m.getBoundingClientRect();
+    if (!R.width) return;
+    svg.setAttribute('width', R.width); svg.setAttribute('height', R.height);
+    const count = {};
+    let h = '';
+    m.querySelectorAll('.ref').forEach(r => {
+      const id = r.dataset.ref, t = m.querySelector(`.obj[data-id="${id}"]`);
+      if (!t) return;
+      const a = r.getBoundingClientRect(), b = t.getBoundingClientRect();
+      const k = count[id] = (count[id] || 0) + 1;
+      const x1 = a.right - R.left + 3, y1 = a.top + a.height / 2 - R.top;
+      const x2 = b.left - R.left - 3, y2 = Math.min(b.top - R.top + 14 + k * 9, b.bottom - R.top - 8);
+      const dx = Math.max(24, (x2 - x1) * .5);
+      const c = OC[(id - 1) % 4];
+      h += `<path d="M${x1} ${y1} C${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2 - 9} ${y2}" stroke="${c}" stroke-width="2.5" fill="none"/>`
+        + `<polygon points="${x2},${y2} ${x2 - 11},${y2 - 6} ${x2 - 11},${y2 + 6}" fill="${c}"/>`;
+    });
+    svg.innerHTML = h;
+  });
+}
+function redrawVisible(){ document.querySelectorAll('.slide.active').forEach(drawArrows); }
+window.addEventListener('resize', redrawVisible);
+
+/* ---------- Python (Pyodide) ---------- */
+let pyPromise = null, pyReady = false;
+const pystat = $('pystat');
+function loadPy(){
+  if (!pyPromise){
+    pystat.textContent = 'Python: loading...';
+    pyPromise = new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js';
+      s.onload = () => loadPyodide().then(py => { pyReady = true; pystat.textContent = 'Python: ready'; res(py); }, rej);
+      s.onerror = rej;
+      document.head.appendChild(s);
+    });
+    pyPromise.catch(() => { pyPromise = null; pystat.textContent = 'Python: could not load (check internet)'; });
+  }
+  return pyPromise;
+}
+function cleanErr(msg){
+  const ls = msg.trim().split('\n');
+  let n = null;
+  for (const l of ls){ const m = l.match(/File "<exec>", line (\d+)/); if (m) n = m[1]; }
+  return (n ? `Error on line ${n}\n` : '') + ls[ls.length - 1];
+}
+async function pyExec(py, ns, code){
+  const out = [];
+  py.setStdout({ batched: s => out.push(s) });
+  py.setStderr({ batched: s => out.push(s) });
+  let err = '';
+  try { await py.runPythonAsync(code, { globals: ns }); }
+  catch (e) { err = cleanErr(String(e.message || e)); }
+  try { py.runPython('import sys\nsys.stdout.flush()'); } catch (e) {}
+  return { text: out.join('\n'), err };
+}
+async function runPy(code){
+  let py;
+  try { py = await loadPy(); } catch (e) { return { text: '', err: 'Python could not start. Check your internet connection and reload the page.' }; }
+  const ns = py.globals.get('dict')();
+  ns.set('__name__', '__main__');
+  const r = await pyExec(py, ns, code);
+  ns.destroy();
+  return r;
+}
+function showRes(out, r){
+  let h = esc(r.text);
+  if (r.err) h += (h ? '\n' : '') + `<span class="err">${esc(r.err)}</span>`;
+  out.innerHTML = h || '<span class="muted">(nothing was printed)</span>';
+}
+
+/* ---------- Runner: editable code + Run (side = output next to the code instead of under it) ---------- */
+const IDLE = '<span class="muted">Press Run to see what happens</span>';
+function makeRunner(root, code, extras = [], side = false){
+  root.classList.add('runner');
+  const ctl = `<div class="controls"${side ? '' : ' style="margin-top:12px"'}><button class="btn primary run">Run</button><button class="btn rst">Reset code</button></div><div class="label">Output</div><pre class="out">${IDLE}</pre>`;
+  root.innerHTML = side ? `<div class="two"><div class="ed"></div><div>${ctl}<div class="rextra"></div></div></div>` : `<div class="ed"></div>${ctl}`;
+  const r = { orig: code, out: root.querySelector('.out') };
+  r.cm = CodeMirror(root.querySelector('.ed'), {
+    value: code, mode: 'python', lineNumbers: true, indentUnit: 4, tabSize: 4, viewportMargin: Infinity,
+    extraKeys: {
+      Tab: cm => cm.somethingSelected() ? cm.indentSelection('add') : cm.replaceSelection('    ', 'end'),
+      'Shift-Tab': cm => cm.indentSelection('subtract'),
+      'Ctrl-Enter': () => r.run(), 'Cmd-Enter': () => r.run()
+    }
+  });
+  r.run = async () => {
+    r.out.innerHTML = pyReady ? '<span class="muted">Running...</span>' : '<span class="muted">Starting Python. The first run can take a few seconds...</span>';
+    showRes(r.out, await runPy(r.cm.getValue()));
+  };
+  r.setCode = c => { r.cm.setValue(c); r.out.innerHTML = IDLE; };
+  root.querySelector('.run').onclick = () => r.run();
+  root.querySelector('.rst').onclick = () => r.setCode(r.orig);
+  const ctr = root.querySelector('.controls');
+  extras.forEach(([label, fn]) => {
+    const b = document.createElement('button'); b.className = 'btn'; b.textContent = label;
+    b.onclick = () => fn(r, b); ctr.appendChild(b);
+  });
+  return r;
+}
+
+/* ---------- Stepper: go through code one line at a time ----------
+   Each step: { line, note, out, err, ...state }. State carries over to the next step,
+   except the highlight fields, which reset every step. */
+const TRANSIENT = ['cls', 'lit', 'hiObj', 'newObj'];
+function makeStepper(root, cfg){
+  const noteHTML = '<p class="note"></p>';
+  root.innerHTML = `<div class="stepper${cfg.noteRight ? ' noteright' : ''}"><div><div class="code stepcode"></div><div class="controls"><button class="btn" data-a="back">&#9664; Back</button><button class="btn primary" data-a="next">Next step &#9654;</button><button class="btn" data-a="reset">Start over</button><span class="muted cnt"></span></div>${cfg.noteRight ? '' : noteHTML}</div><div>${cfg.noteRight ? noteHTML : ''}<div class="label">Memory</div><div class="mem"></div><div class="label">Output</div><pre class="out"></pre></div></div>`;
+  root.querySelector('.stepcode').innerHTML = codeLines(cfg.code);
+  const lnEls = [...root.querySelectorAll('.ln')];
+  const init = { outs: [], note: 'Press <b>Next step</b> to run the code one line at a time' };
+  const states = [];
+  let prev = {}, outs = [];
+  cfg.steps.forEach(s => {
+    if (s.out !== undefined) outs = outs.concat([{ t: s.out, err: !!s.err }]);
+    const base = { ...prev };
+    TRANSIENT.forEach(k => delete base[k]);
+    const st = { ...base, ...s, outs };
+    states.push(st);
+    prev = { ...st };
+    delete prev.out; delete prev.err; delete prev.note; delete prev.line;
+  });
+  let i = -1;
+  const outEl = root.querySelector('.out'), noteEl = root.querySelector('.note'), mem = root.querySelector('.mem');
+  function render(){
+    const st = i < 0 ? init : states[i];
+    lnEls.forEach((el, k) => el.classList.toggle('cur', st.line === k + 1));
+    outEl.innerHTML = st.outs.map(o => o.err ? `<span class="err">${esc(o.t)}</span>` : esc(o.t)).join('\n');
+    mem.innerHTML = (i < 0 ? '' : memHTML(st)) || '<span class="empty">(nothing yet)</span>';
+    drawArrows(mem);
+    noteEl.innerHTML = st.note || '';
+    root.querySelector('[data-a=back]').disabled = i < 0;
+    root.querySelector('[data-a=next]').disabled = i >= states.length - 1;
+    root.querySelector('.cnt').textContent = i < 0 ? '' : `Step ${i + 1} of ${states.length}`;
+  }
+  root.querySelector('[data-a=next]').onclick = () => { if (i < states.length - 1){ i++; render(); } };
+  root.querySelector('[data-a=back]').onclick = () => { if (i >= 0){ i--; render(); } };
+  root.querySelector('[data-a=reset]').onclick = () => { i = -1; render(); };
+  render();
+}
+
+/* shorthand for steps */
+const R = (n, ref) => ({ n, ref });          // variable that refers to an object
+const VAL = (n, v) => ({ n, v });            // variable holding a plain value
+const O = (id, attrs, cls = 'Dog') => ({ id, cls, attrs });
+
+const F = (label, vars) => ({ label, vars });  // a function's box in the memory picture
+
+const PET = 'class Pet:\n    def __init__(self, name, age):\n        self.name = name\n        self.age = age\n\n    def birthday(self):\n        self.age = self.age + 1';
+const PET_SPEAK = 'class Pet:\n    def __init__(self, name):\n        self.name = name\n\n    def speak(self):\n        print(self.name, "makes a sound")';
+
+/* ---------- class tree: Pet on top, Dog and Cat underneath ---------- */
+function treeHTML(inherited){
+  const row = (lab, items, cls = '') => `<div class="brow${cls}"><span class="bs">${lab}</span>${items.map(i => `<span class="bi" data-m="${i.replace('()', '')}">${i}</span>`).join('')}</div>`;
+  const box = (c, title, rows) => `<div class="bp" data-c="${c}"><div class="bt">${title}</div>${rows}</div>`;
+  const got = inherited ? row('gets from Pet', ['name', 'age', 'birthday()'], ' inh') : '';
+  return `<div class="tree">
+    <div class="trow1">${box('Pet', 'class Pet', row('every Pet has', ['name', 'age']) + row('every Pet can', ['birthday()']))}</div>
+    <div class="tconn"></div>
+    <div class="trow2">${box('Dog', 'class Dog(Pet)', row('adds', ['bark()']) + got)}${box('Cat', 'class Cat(Pet)', row('adds', ['meow()']) + got)}</div>
+  </div>`;
+}
+
+/* ---------- Slide 1 ---------- */
+(() => {
+  $('s1tree').innerHTML = treeHTML(true);
+  const rows = [...$('s1tree').querySelectorAll('.inh')];
+  let k = 0;
+  setInterval(() => {
+    if (!slides[cur] || slides[cur].id !== 's1') return;
+    k = (k + 1) % 4;
+    rows.forEach((r, i) => r.classList.toggle('on', k > i));
+  }, 1300);
+})();
+
+/* ---------- Slide 2: last week ---------- */
+makeRunner($('s2run'), 'class Dog:\n    def __init__(self, name, age):\n        self.name = name\n        self.age = age\n\n    def birthday(self):\n        self.age = self.age + 1\n\n    def bark(self):\n        print(self.name, "says woof!")\n\nrex = Dog("Rex", 3)\nrex.birthday()\nrex.bark()\nprint(rex.age)', [], true);
+
+/* ---------- Slide 3: copied code ---------- */
+(() => {
+  const mk = (cls, m, sound) => `class ${cls}:\n    def __init__(self, name, age):\n        self.name = name\n        self.age = age\n\n    def birthday(self):\n        self.age = self.age + 1\n\n    def ${m}(self):\n        print(self.name, "says ${sound}!")`;
+  const same = [2, 3, 4, 6, 7];
+  let on = false;
+  const draw = () => {
+    $('s3dog').innerHTML = codeLines(mk('Dog', 'bark', 'woof'), on ? same : []);
+    $('s3cat').innerHTML = codeLines(mk('Cat', 'meow', 'meow'), on ? same : []);
+    $('s3btn').textContent = on ? 'Hide' : 'Show what\'s the same';
+    $('s3note').style.visibility = on ? 'visible' : 'hidden';
+  };
+  $('s3btn').onclick = () => { on = !on; draw(); };
+  draw();
+})();
+
+/* ---------- Slide 4 ---------- */
+$('s4tree').innerHTML = treeHTML(false);
+
+/* ---------- Slide 5: writing a child class ---------- */
+(() => {
+  const S = t => `<span class="s">${t}</span>`, K = t => `<span class="k">${t}</span>`, G = t => `<span class="g">${t}</span>`;
+  $('s5code').innerHTML = hl(PET + '\n\n') +
+    '<span class="cm-keyword">class</span> ' + K('Dog') + S('(Pet)') + ':\n' +
+    '    ' + G(hl('def bark(self):')) + '\n' +
+    '    ' + G(hl('    print(self.name, "says woof!")'));
+  $('s5cat').innerHTML = hl('class Cat(Pet):\n    def meow(self):\n        print(self.name, "says meow!")');
+})();
+
+/* ---------- Slide 6: making an object from a child class ---------- */
+(() => {
+  const D = (attrs) => [O(1, attrs, 'Dog')];
+  const full = age => D([['name', '"Rex"'], ['age', String(age)]]);
+  makeStepper($('s6step'), {
+    code: PET + '\n\nclass Dog(Pet):\n    def bark(self):\n        print(self.name, "says woof!")\n\nrex = Dog("Rex", 3)\nrex.birthday()\nrex.bark()\nprint(rex.age)',
+    steps: [
+      { line: 1, note: 'Python remembers the <code>Pet</code> class' },
+      { line: 9, note: 'Then it remembers <code>Dog</code>, and that <code>Dog</code>\'s parent is <code>Pet</code>' },
+      { line: 13, objs: D([]), newObj: 1, note: '<code>Dog("Rex", 3)</code> makes a new empty Dog object. <code>Dog</code> doesn\'t have a constructor, so Python uses the one from <code>Pet</code>.' },
+      { line: 2, frames: [F('inside <code>__init__</code>', [R('self', 1), VAL('name', '"Rex"'), VAL('age', '3')])], note: '<code>Pet</code>\'s constructor runs, and <code>self</code> is the new Dog' },
+      { line: 3, objs: D([['name', '"Rex"']]), cls: { '1.name': 'new' }, note: 'The name is saved on the Dog object' },
+      { line: 4, objs: full(3), cls: { '1.age': 'new' }, note: 'The age is saved the same way' },
+      { line: 13, frames: [], vars: [R('rex', 1)], hiObj: 1, note: 'The constructor is done and <code>rex</code> points to the new Dog' },
+      { line: 14, hiObj: 1, note: '<code>Dog</code> doesn\'t have a <code>birthday</code> method either, so Python looks in <code>Pet</code> and finds it there' },
+      { line: 6, frames: [F('inside <code>birthday</code>', [R('self', 1)])], note: '<code>self</code> points to Rex\'s object' },
+      { line: 7, objs: full(4), cls: { '1.age': 'changed' }, note: 'Rex is now 4' },
+      { line: 15, frames: [], hiObj: 1, note: '<code>bark</code> is in <code>Dog</code>, so Python doesn\'t need to look in <code>Pet</code> this time' },
+      { line: 10, frames: [F('inside <code>bark</code>', [R('self', 1)])], note: '<code>self</code> points to Rex\'s object again' },
+      { line: 11, lit: ['1.name'], out: 'Rex says woof!', note: '<code>self.name</code> was saved by <code>Pet</code>\'s constructor, and <code>Dog</code>\'s method can use it' },
+      { line: 16, frames: [], lit: ['1.age'], out: '4', note: 'Rex can do everything a Pet can do, and he can also bark' }
+    ]
+  });
+})();
+
+/* ---------- Slide 7: where Python finds a method ---------- */
+(() => {
+  const OBJ = [
+    { v: 'rex', cls: 'Dog', n: 'Rex', a: 3 },
+    { v: 'tom', cls: 'Cat', n: 'Tom', a: 2 },
+    { v: 'sam', cls: 'Pet', n: 'Sam', a: 4 }
+  ];
+  const HAS = { Pet: ['birthday'], Dog: ['bark'], Cat: ['meow'] };
+  const RESULT = {
+    birthday: o => `<span class="muted">Nothing is printed, but ${o.n}'s age goes from ${o.a} to ${o.a + 1}</span>`,
+    bark: o => esc(`${o.n} says woof!`),
+    meow: o => esc(`${o.n} says meow!`)
+  };
+  const METHODS = ['birthday', 'bark', 'meow'];
+  const IDLE_SAY = 'Click a method to call it';
+  $('s7tree').innerHTML = treeHTML(false);
+  const box = c => $('s7tree').querySelector(`.bp[data-c="${c}"]`);
+  const say = h => { $('s7say').innerHTML = h; };
+  let oi = 0, token = 0;
+  const clear = () => {
+    $('s7tree').querySelectorAll('.bp').forEach(b => b.classList.remove('look', 'found', 'miss'));
+    $('s7tree').querySelectorAll('.bi').forEach(b => b.classList.remove('hit'));
+  };
+  const btns = METHODS.map(m => {
+    const b = document.createElement('button'); b.className = 'btn mono';
+    b.onclick = () => call(m);
+    $('s7btns').appendChild(b);
+    return b;
+  });
+  function call(m){
+    const t = ++token, o = OBJ[oi];
+    const path = o.cls === 'Pet' ? ['Pet'] : [o.cls, 'Pet'];
+    clear();
+    $('s7out').innerHTML = '';
+    const step = i => {
+      if (t !== token) return;
+      if (i >= path.length){
+        say(path.length === 1
+          ? `<code>${m}</code> isn't in <code>Pet</code>. Python never looks in the child classes, so it stops with an error.`
+          : `<code>${m}</code> isn't in <code>${o.cls}</code> or <code>Pet</code>, so Python stops with an error`);
+        $('s7out').innerHTML = `<span class="err">${esc(`AttributeError: '${o.cls}' object has no attribute '${m}'`)}</span>`;
+        return;
+      }
+      const c = path[i];
+      box(c).classList.add('look');
+      say(i === 0 ? `<code>${o.v}</code> is a ${c}, so Python looks in <code>${c}</code> first` : `<code>${m}</code> isn't in <code>${path[0]}</code>, so Python looks in the parent class`);
+      setTimeout(() => {
+        if (t !== token) return;
+        box(c).classList.remove('look');
+        if (HAS[c].includes(m)){
+          box(c).classList.add('found');
+          box(c).querySelector(`.bi[data-m="${m}"]`).classList.add('hit');
+          say(`Python found <code>${m}</code> in <code>${c}</code>, so that's the one it runs`);
+          $('s7out').innerHTML = RESULT[m](o);
+        } else {
+          box(c).classList.add('miss');
+          step(i + 1);
+        }
+      }, 1100);
+    };
+    step(0);
+  }
+  makeTabs($('s7tabs'), OBJ.map(o => `${o.v} = ${o.cls}("${o.n}", ${o.a})`), i => {
+    oi = i; token++;
+    clear(); say(IDLE_SAY); $('s7out').innerHTML = '';
+    btns.forEach((b, k) => { b.textContent = `${OBJ[i].v}.${METHODS[k]}()`; });
+  }, true);
+})();
+
+/* ---------- Slide 8: overriding ---------- */
+makeRunner($('s8run'), PET_SPEAK + '\n\nclass Dog(Pet):\n    def speak(self):\n        print(self.name, "says woof!")\n\nclass Fish(Pet):\n    pass\n\nrex = Dog("Rex")\nnemo = Fish("Nemo")\n\nrex.speak()\nnemo.speak()', [], true);
+$('s8run').querySelector('.rextra').appendChild($('s8side'));
+
+/* ---------- Slide 9: a child with its own attributes ---------- */
+(() => {
+  const TOP = 'class Pet:\n    def __init__(self, name, age):\n        self.name = name\n        self.age = age\n\nclass Dog(Pet):\n    def __init__(self, name, age, breed):\n';
+  const END = '        self.breed = breed\n\nrex = Dog("Rex", 3, "Beagle")\nprint(rex.breed)\nprint(rex.name)';
+  makeRunner($('s9run'), TOP + END, [['Fix it', r => { r.setCode(TOP + '        super().__init__(name, age)\n' + END); r.run(); }]]);
+})();
+
+/* ---------- Slide 10: reading super() ---------- */
+(() => {
+  const S = t => `<span class="s">${t}</span>`, K = t => `<span class="k">${t}</span>`, V = t => `<span class="v">${t}</span>`, G = t => `<span class="g">${t}</span>`;
+  const kw = t => `<span class="cm-keyword">${t}</span>`;
+  $('s10code').innerHTML =
+    `${kw('class')} Dog(Pet):\n` +
+    `    ${kw('def')} __init__(self, name, age, breed):\n` +
+    `        ${S('super()')}${K('.__init__')}(${V('name, age')})\n` +
+    `        ${G('self.breed = breed')}`;
+})();
+
+/* ---------- Slide 11: two constructors, one object ---------- */
+(() => {
+  const D = attrs => [O(1, attrs, 'Dog')];
+  const dogF = F('inside <b>Dog</b>\'s <code>__init__</code>', [R('self', 1), VAL('name', '"Rex"'), VAL('age', '3'), VAL('breed', '"Beagle"')]);
+  const petF = F('inside <b>Pet</b>\'s <code>__init__</code>', [R('self', 1), VAL('name', '"Rex"'), VAL('age', '3')]);
+  makeStepper($('s11step'), {
+    code: 'class Pet:\n    def __init__(self, name, age):\n        self.name = name\n        self.age = age\n\nclass Dog(Pet):\n    def __init__(self, name, age, breed):\n        super().__init__(name, age)\n        self.breed = breed\n\nrex = Dog("Rex", 3, "Beagle")\nprint(rex.name, "is a", rex.breed)',
+    steps: [
+      { line: 11, objs: D([]), newObj: 1, note: 'Like always, Python starts by making a new empty object' },
+      { line: 7, frames: [dogF], note: '<code>Dog</code> has its own constructor now, so that\'s the one Python runs' },
+      { line: 8, note: 'This line calls <code>Pet</code>\'s constructor and passes along the name and age' },
+      { line: 2, frames: [dogF, petF], note: 'Now <code>Pet</code>\'s constructor is running. Its <code>self</code> points to the same object.' },
+      { line: 3, objs: D([['name', '"Rex"']]), cls: { '1.name': 'new' }, note: '<code>Pet</code>\'s constructor saves the name' },
+      { line: 4, objs: D([['name', '"Rex"'], ['age', '3']]), cls: { '1.age': 'new' }, note: 'And the age' },
+      { line: 9, frames: [dogF], objs: D([['name', '"Rex"'], ['age', '3'], ['breed', '"Beagle"']]), cls: { '1.breed': 'new' }, note: '<code>Pet</code>\'s constructor is done, so we\'re back in <code>Dog</code>\'s. It saves the breed.' },
+      { line: 11, frames: [], vars: [R('rex', 1)], hiObj: 1, note: 'The object has all three attributes and <code>rex</code> points to it' },
+      { line: 12, lit: ['1.name', '1.breed'], out: 'Rex is a Beagle', note: '<code>name</code> was saved by <code>Pet</code> and <code>breed</code> was saved by <code>Dog</code>' }
+    ]
+  });
+})();
+
+/* ---------- Slide 12: adding to a parent's method ---------- */
+makeRunner($('s12run'), 'class Pet:\n    def __init__(self, name, age):\n        self.name = name\n        self.age = age\n\n    def describe(self):\n        print(self.name, "is", self.age, "years old")\n\nclass Dog(Pet):\n    def __init__(self, name, age, breed):\n        super().__init__(name, age)\n        self.breed = breed\n\n    def describe(self):\n        super().describe()\n        print(self.name, "is a", self.breed)\n\nrex = Dog("Rex", 3, "Beagle")\nrex.describe()', [], true);
+$('s12run').querySelector('.rextra').appendChild($('s12side'));
+
+/* ---------- Slide 13: isinstance ---------- */
+(() => {
+  $('s13code').innerHTML = hl('rex = Dog("Rex", 3)\nsam = Pet("Sam", 4)');
+  $('s13pack').innerHTML =
+    `<div class="scard"><div class="vl">rex</div>${objHTML(O(1, [['name', '"Rex"'], ['age', '3']], 'Dog'))}</div>` +
+    `<div class="scard"><div class="vl">sam</div>${objHTML(O(2, [['name', '"Sam"'], ['age', '4']], 'Pet'))}</div>`;
+  const T = [
+    ['isinstance(rex, Dog)', 'True', '<code>rex</code> was made from <code>Dog</code>'],
+    ['isinstance(rex, Pet)', 'True', '<code>Dog</code> inherits from <code>Pet</code>, so every Dog is also a Pet'],
+    ['isinstance(rex, Cat)', 'False', '<code>Dog</code> and <code>Cat</code> have the same parent, but a Dog isn\'t a Cat'],
+    ['isinstance(sam, Dog)', 'False', '<code>sam</code> was made from <code>Pet</code>. Every Dog is a Pet, but not every Pet is a Dog.']
+  ];
+  T.forEach(([ex, res, why]) => {
+    const b = document.createElement('button'); b.className = 'btn mono'; b.textContent = ex;
+    b.onclick = () => {
+      $('s13out').innerHTML = hl(ex) + '  <span class="muted">gives</span>  ' + hl(res);
+      $('s13why').className = ''; $('s13why').innerHTML = why;
+    };
+    $('s13btns').appendChild(b);
+  });
+})();
+
+/* ---------- Slide 14: different objects in one list ---------- */
+makeRunner($('s14run'), PET_SPEAK + '\n\nclass Dog(Pet):\n    def speak(self):\n        print(self.name, "says woof!")\n\nclass Cat(Pet):\n    def speak(self):\n        print(self.name, "says meow!")\n\nclass Fish(Pet):\n    pass\n\npets = [Dog("Rex"), Cat("Tom"), Fish("Nemo")]\nfor pet in pets:\n    pet.speak()', [], true);
+
+/* ---------- Slide 15: is a / has a ---------- */
+(() => {
+  const Q = [
+    { pair: 'Dog and Pet', is: 'A dog is a pet', has: 'A dog has a pet', ans: 'is',
+      why: 'A dog is a kind of pet, so <code>class Dog(Pet)</code> makes sense' },
+    { pair: 'Car and Engine', is: 'A car is an engine', has: 'A car has an engine', ans: 'has',
+      why: 'A car isn\'t a kind of engine. Give the car an attribute like <code>self.engine</code> instead.' },
+    { pair: 'Savings account and Account', is: 'A savings account is an account', has: 'A savings account has an account', ans: 'is',
+      why: 'It does everything an account does and a little more, so <code>class Savings(Account)</code> makes sense' },
+    { pair: 'Team and Player', is: 'A team is a player', has: 'A team has players', ans: 'has',
+      why: 'Keep the players in a list attribute like <code>self.players</code>' },
+    { pair: 'Teacher and Person', is: 'A teacher is a person', has: 'A teacher has a person', ans: 'is',
+      why: '<code>Teacher</code> can inherit the name from <code>Person</code> and add a subject' }
+  ];
+  Q.forEach(q => {
+    const d = document.createElement('div'); d.className = 'q';
+    d.innerHTML = `<span class="pair">${q.pair}</span><button class="btn" data-a="is">${q.is}</button><button class="btn" data-a="has">${q.has}</button><div class="ans">${q.why}</div>`;
+    d.querySelectorAll('button').forEach(b => {
+      b.onclick = () => {
+        if (b.dataset.a === q.ans){ b.classList.remove('no'); b.classList.add('yes'); d.classList.add('done'); }
+        else b.classList.add('no');
+      };
+    });
+    $('s15q').appendChild(d);
+  });
+})();
+
+/* ---------- Slide 16: savings account ---------- */
+(() => {
+  const A = attrs => [O(1, attrs, 'Savings')];
+  const acct = bal => A([['owner', '"Maya"'], ['balance', String(bal)], ['rate', '0.1']]);
+  const savF = F('inside <b>Savings</b>\'s <code>__init__</code>', [R('self', 1), VAL('owner', '"Maya"'), VAL('rate', '0.1')]);
+  const accF = F('inside <b>Account</b>\'s <code>__init__</code>', [R('self', 1), VAL('owner', '"Maya"')]);
+  const intF = F('inside <code>add_interest</code>', [R('self', 1), VAL('interest', '20.0')]);
+  makeStepper($('s16step'), {
+    noteRight: true,
+    code: 'class Account:\n    def __init__(self, owner):\n        self.owner = owner\n        self.balance = 0\n\n    def deposit(self, amount):\n        self.balance = self.balance + amount\n\nclass Savings(Account):\n    def __init__(self, owner, rate):\n        super().__init__(owner)\n        self.rate = rate\n\n    def add_interest(self):\n        interest = self.balance * self.rate\n        self.deposit(interest)\n\nacct = Savings("Maya", 0.1)\nacct.deposit(200)\nacct.add_interest()\nprint(acct.balance)',
+    steps: [
+      { line: 1, note: 'Python remembers the <code>Account</code> class' },
+      { line: 9, note: 'Then it remembers <code>Savings</code>, and that its parent is <code>Account</code>' },
+      { line: 18, objs: A([]), newObj: 1, note: 'This makes a new empty Savings object' },
+      { line: 10, frames: [savF], note: '<code>Savings</code> has its own constructor, so that one runs' },
+      { line: 11, note: 'It starts by calling <code>Account</code>\'s constructor and passing along the owner' },
+      { line: 2, frames: [savF, accF], note: '<code>Account</code>\'s constructor runs on the same object' },
+      { line: 3, objs: A([['owner', '"Maya"']]), cls: { '1.owner': 'new' }, note: 'The owner is saved' },
+      { line: 4, objs: A([['owner', '"Maya"'], ['balance', '0']]), cls: { '1.balance': 'new' }, note: 'The balance starts at 0, like every account' },
+      { line: 12, frames: [savF], objs: acct(0), cls: { '1.rate': 'new' }, note: 'Back in <code>Savings</code>\'s constructor, the rate is saved. Only savings accounts have a rate.' },
+      { line: 18, frames: [], vars: [R('acct', 1)], hiObj: 1, note: '<code>acct</code> points to the new savings account' },
+      { line: 19, hiObj: 1, note: '<code>Savings</code> doesn\'t have a <code>deposit</code> method, so Python uses the one from <code>Account</code>' },
+      { line: 6, frames: [F('inside <code>deposit</code>', [R('self', 1), VAL('amount', '200')])], note: '<code>amount</code> is 200' },
+      { line: 7, objs: acct(200), cls: { '1.balance': 'changed' }, note: '0 + 200 is 200' },
+      { line: 20, frames: [], hiObj: 1, note: '<code>add_interest</code> is in <code>Savings</code>' },
+      { line: 14, frames: [F('inside <code>add_interest</code>', [R('self', 1)])], note: '<code>self</code> points to the savings account' },
+      { line: 15, frames: [intF], lit: ['1.balance', '1.rate'], note: '200 * 0.1 is 20.0' },
+      { line: 16, note: 'An inherited method is called with <code>self.</code> like any other method, so this deposits the interest' },
+      { line: 6, frames: [intF, F('inside <code>deposit</code>', [R('self', 1), VAL('amount', '20.0')])], note: '<code>deposit</code> runs again, this time with 20.0' },
+      { line: 7, objs: acct('220.0'), cls: { '1.balance': 'changed' }, note: '200 + 20.0 is 220.0' },
+      { line: 21, frames: [], lit: ['1.balance'], out: '220.0', note: '<code>Savings</code> only added a rate and one method. Everything else came from <code>Account</code>.' }
+    ]
+  });
+})();
+
+/* ---------- Slide 17: common mistakes ---------- */
+(() => {
+  const P2 = 'class Pet:\n    def __init__(self, name, age):\n        self.name = name\n        self.age = age\n\n';
+  const DOG3 = fix => P2 + 'class Dog(Pet):\n    def __init__(self, name, age, breed):\n' + fix + '        self.breed = breed\n\nrex = Dog("Rex", 3, "Beagle")\nprint(rex.name, "is a", rex.breed)';
+  const GOOD3 = DOG3('        super().__init__(name, age)\n');
+  const SPK = (def, who) => PET_SPEAK + '\n\nclass Dog(Pet):\n    def ' + def + '(self):\n        print(self.name, "says woof!")\n\n' + who + '\nrex.speak()';
+  const M = [
+    { tab: 'Forgot the parent',
+      bad: P2 + 'class Dog:\n    def bark(self):\n        print(self.name, "says woof!")\n\nrex = Dog("Rex", 3)\nrex.bark()',
+      good: P2 + 'class Dog(Pet):\n    def bark(self):\n        print(self.name, "says woof!")\n\nrex = Dog("Rex", 3)\nrex.bark()',
+      why: 'Without <code>(Pet)</code>, <code>Dog</code> is a separate class that doesn\'t inherit anything. It has no constructor, so it can\'t take a name and an age.' },
+    { tab: 'Forgot super().__init__',
+      bad: DOG3(''), good: GOOD3,
+      why: '<code>Dog</code>\'s constructor replaced <code>Pet</code>\'s, so the name and age were never saved. Call <code>super().__init__(name, age)</code> to run <code>Pet</code>\'s constructor too.' },
+    { tab: 'Passed self to super()',
+      bad: DOG3('        super().__init__(self, name, age)\n'), good: GOOD3,
+      why: '<code>super()</code> already passes <code>self</code> for you, the same way <code>rex.bark()</code> does. Writing it again gives the constructor one value too many.' },
+    { tab: 'Forgot () on super',
+      bad: DOG3('        super.__init__(name, age)\n'), good: GOOD3,
+      why: '<code>super</code> is a function, so it needs parentheses. The error message is confusing, but the fix is to write <code>super()</code>.' },
+    { tab: 'Different method name',
+      bad: SPK('Speak', 'rex = Dog("Rex")'), good: SPK('speak', 'rex = Dog("Rex")'),
+      why: 'Python sees <code>Speak</code> and <code>speak</code> as two different names, so <code>Dog</code>\'s method didn\'t replace <code>Pet</code>\'s. There\'s no error, but the wrong method runs.' },
+    { tab: 'Child method on a parent',
+      bad: P2 + 'class Dog(Pet):\n    def bark(self):\n        print(self.name, "says woof!")\n\nsam = Pet("Sam", 4)\nsam.bark()',
+      good: P2 + 'class Dog(Pet):\n    def bark(self):\n        print(self.name, "says woof!")\n\nsam = Dog("Sam", 4)\nsam.bark()',
+      why: '<code>bark</code> belongs to <code>Dog</code>, and a <code>Pet</code> doesn\'t get anything from its child classes. If Sam needs to bark, make him a <code>Dog</code>.' }
+  ];
+  let mi = 0;
+  const r = makeRunner($('s17run'), M[0].bad, [['Show fix', rr => { rr.setCode(M[mi].good); rr.run(); $('s17why').className = ''; $('s17why').innerHTML = M[mi].why; }]]);
+  makeTabs($('s17tabs'), M.map(m => m.tab), i => {
+    mi = i; r.orig = M[i].bad; r.setCode(M[i].bad);
+    $('s17why').className = 'muted'; $('s17why').textContent = 'Run the code, then press Show fix';
+  });
+})();
+
+/* ---------- Slide 18: review ---------- */
+(() => {
+  const T = (t, bg) => `<span class="tag" style="background:${bg}">${t}</span>`;
+  const rows = [
+    ['class Pet:', T('parent class', '#fff2a8') + '<span>the shared code goes here</span>'],
+    ['    def __init__(self, name):', ''],
+    ['        self.name = name', ''],
+    ['', ''],
+    ['    def speak(self):', ''],
+    ['        print(self.name, "makes a sound")', ''],
+    ['', ''],
+    ['class Dog(Pet):', T('child class', '#e6efff') + '<span>gets everything <code>Pet</code> has</span>'],
+    ['    def __init__(self, name, breed):', ''],
+    ['        super().__init__(name)', T('super()', '#ebdffb') + '<span>runs <code>Pet</code>\'s version</span>'],
+    ['        self.breed = breed', T('new attribute', '#dff3e4') + '<span>only dogs have it</span>'],
+    ['', ''],
+    ['    def speak(self):', T('override', '#ffd9a8') + '<span>replaces <code>Pet</code>\'s <code>speak</code></span>'],
+    ['        print(self.name, "says woof!")', ''],
+    ['', ''],
+    ['rex = Dog("Rex", "Beagle")', ''],
+    ['rex.speak()', '<span>Python looks in <code>Dog</code> first, then <code>Pet</code></span>']
+  ];
+  $('s21code').innerHTML = hl(rows.map(r => r[0]).join('\n'));
+  $('s21legend').innerHTML = rows.filter(r => r[1]).map(([, a]) => { const m = a.match(/^(<span class="tag"[^>]*>.*?<\/span>)(.*)$/); return m ? `<span>${m[1]}</span>${m[2]}` : `<span><span class="tag" style="background:var(--code-bg)">${hl('rex.speak()')}</span></span>${a}`; }).join('');
+  $('s21recap').innerHTML = rows.map(([c, a], i) => `<div class="rc${i === 0 ? ' first' : ''}${i === rows.length - 1 ? ' last' : ''}">${hl(c) || ' '}</div><div class="ra">${a}</div>`).join('');
+})();
+
+/* ---------- Slide 19: practice ---------- */
+(() => {
+  const CH = [
+    { tab: 'Cat',
+      desc: 'Write a <code>Cat</code> class that inherits from <code>Pet</code>. Give it a <code>meow()</code> method that returns the cat\'s name followed by <code>" says meow!"</code>.',
+      start: 'class Pet:\n    def __init__(self, name):\n        self.name = name\n\n# write your Cat class here\n',
+      hint: 'Start with <code>class Cat(Pet):</code>. Cat doesn\'t need its own <code>__init__</code>. In <code>meow</code>, return <code>self.name + " says meow!"</code>.',
+      tests: [
+        ['Cat("Tom").meow()', '_r = Cat("Tom").meow()', '\'Tom says meow!\''],
+        ['Cat("Luna").name', '_r = Cat("Luna").name', '\'Luna\''],
+        ['isinstance(Cat("Tom"), Pet)', '_r = isinstance(Cat("Tom"), Pet)', 'True']] },
+    { tab: 'Square',
+      desc: 'A square is a rectangle with the same width and height. Finish the constructor so <code>Square(4)</code> has a width of 4 and a height of 4. Use <code>super()</code>.',
+      start: 'class Rectangle:\n    def __init__(self, width, height):\n        self.width = width\n        self.height = height\n\n    def area(self):\n        return self.width * self.height\n\nclass Square(Rectangle):\n    def __init__(self, side):\n        # your code here\n        pass',
+      hint: '<code>Rectangle</code>\'s constructor needs a width and a height. Pass <code>side</code> for both with <code>super().__init__(side, side)</code>.',
+      tests: [
+        ['Square(4).area()', '_r = Square(4).area()', '16'],
+        ['Square(3).width', '_r = Square(3).width', '3'],
+        ['Square(3).height', '_r = Square(3).height', '3'],
+        ['Rectangle(2, 5).area()', '_r = Rectangle(2, 5).area()', '10']] },
+    { tab: 'Teacher',
+      desc: 'Finish <code>Teacher</code> so it also saves a <code>subject</code>. Then override <code>describe()</code> so it returns what <code>Person</code>\'s version returns, followed by <code>" and I teach "</code> and the subject.',
+      start: 'class Person:\n    def __init__(self, name):\n        self.name = name\n\n    def describe(self):\n        return "My name is " + self.name\n\nclass Teacher(Person):\n    def __init__(self, name, subject):\n        # your code here\n        pass\n\n    def describe(self):\n        # your code here\n        return ""',
+      hint: 'In the constructor, call <code>super().__init__(name)</code> and then save the subject. In <code>describe</code>, start with <code>super().describe()</code> and add the rest with <code>+</code>.',
+      tests: [
+        ['Teacher("Ana", "Math").describe()', '_r = Teacher("Ana", "Math").describe()', '\'My name is Ana and I teach Math\''],
+        ['Teacher("Ana", "Math").name', '_r = Teacher("Ana", "Math").name', '\'Ana\''],
+        ['Teacher("Ana", "Math").subject', '_r = Teacher("Ana", "Math").subject', '\'Math\''],
+        ['Person("Sam").describe()', '_r = Person("Sam").describe()', '\'My name is Sam\'']] }
+  ];
+  const CHECK = `for _label, _code, _exp in TESTS:
+    try:
+        _ns = dict(globals())
+        exec(_code, _ns)
+        _v = _ns["_r"]
+        _got = repr(_v)
+        _ok = _v == eval(_exp)
+    except Exception as _e:
+        _got = type(_e).__name__ + ": " + str(_e)
+        _ok = False
+    print(("PASS" if _ok else "FAIL") + "\\t" + _label + "\\t" + _got + "\\t" + _exp)`;
+  let ci = 0;
+  const res = $('s22res');
+  const check = async rr => {
+    res.innerHTML = `<li class="muted">${pyReady ? 'Testing...' : 'Starting Python. The first run can take a few seconds...'}</li>`;
+    let py;
+    try { py = await loadPy(); } catch (e) { res.innerHTML = '<li class="err">Python could not start</li>'; return; }
+    const ns = py.globals.get('dict')();
+    ns.set('__name__', '__main__');
+    const a = await pyExec(py, ns, rr.cm.getValue());
+    showRes(rr.out, a);
+    if (a.err){ ns.destroy(); res.innerHTML = `<li class="err">Your code has an error:</li><li class="err" style="white-space:pre-wrap">${esc(a.err)}</li>`; return; }
+    const b = await pyExec(py, ns, CHECK.replace('TESTS', JSON.stringify(CH[ci].tests)));
+    ns.destroy();
+    const rows = b.text.split('\n').filter(Boolean).map(l => l.split('\t'));
+    const all = rows.length && rows.every(x => x[0] === 'PASS');
+    res.innerHTML = rows.map(([ok, ex, got, exp]) => ok === 'PASS'
+      ? `<li><span class="good">&#10003;</span> ${esc(ex)} gave ${esc(got)}</li>`
+      : `<li><span class="badt">&#10007;</span> ${esc(ex)} gave ${esc(got)} but should be ${esc(exp)}</li>`).join('')
+      + (all ? '<li class="good" style="margin-top:8px">All tests passed</li>' : '');
+  };
+  const r = makeRunner($('s22run'), CH[0].start, [['Hint', () => { $('s22hint').style.display = 'block'; }]]);
+  r.run = () => { r.out.innerHTML = '<span class="muted">Running...</span>'; return check(r); };
+  $('s22run').querySelector('.rst').remove();
+  CH.forEach(c => c.cur = c.start);
+  let first = true;
+  makeTabs($('s22tabs'), CH.map(c => c.tab), i => {
+    if (!first) CH[ci].cur = r.cm.getValue();
+    first = false; ci = i;
+    $('s22desc').innerHTML = CH[i].desc;
+    $('s22hint').innerHTML = CH[i].hint; $('s22hint').style.display = 'none';
+    r.orig = CH[i].start; r.setCode(CH[i].cur);
+    res.innerHTML = '<li class="muted">Press Run to test your class</li>';
+  });
+})();
+
+/* ---------- Navigation: bottom buttons (and arrow keys on a keyboard) ---------- */
+const slides = [...document.querySelectorAll('.slide')];
+let cur = 0;
+function show(n){
+  n = Math.max(0, Math.min(slides.length - 1, n));
+  slides[cur].classList.remove('active');
+  cur = n;
+  const s = slides[cur];
+  s.classList.add('active'); s.scrollTop = 0;
+  $('counter').textContent = `${cur + 1} / ${slides.length}`;
+  $('bar').style.width = ((cur + 1) / slides.length * 100) + '%';
+  $('prev').disabled = cur === 0; $('next').disabled = cur === slides.length - 1;
+  history.replaceState(null, '', '#' + (cur + 1));
+  s.querySelectorAll('.CodeMirror').forEach(e => e.CodeMirror.refresh());
+  drawArrows(s);
+}
+$('prev').onclick = () => show(cur - 1);
+$('next').onclick = () => show(cur + 1);
+document.addEventListener('keydown', e => {
+  const t = e.target;
+  if (t.closest && (t.closest('.CodeMirror') || t.matches('input,textarea,select'))) return;
+  if (e.key === 'ArrowRight' || e.key === 'PageDown'){ show(cur + 1); e.preventDefault(); }
+  else if (e.key === 'ArrowLeft' || e.key === 'PageUp'){ show(cur - 1); e.preventDefault(); }
+});
+// stop iOS Safari zooming on a fast double tap
+let lastTouch = 0;
+document.addEventListener('touchend', e => {
+  const now = Date.now();
+  if (now - lastTouch < 350 && !(e.target.closest && e.target.closest('input,textarea,.CodeMirror'))){
+    e.preventDefault();
+    const b = e.target.closest && e.target.closest('button');
+    if (b && !b.disabled) b.click();
+  }
+  lastTouch = now;
+}, { passive: false });
+document.addEventListener('gesturestart', e => e.preventDefault());
+show((parseInt(location.hash.slice(1)) || 1) - 1);
+if (document.fonts) document.fonts.ready.then(redrawVisible);
+window.addEventListener('load', () => setTimeout(() => loadPy().catch(() => {}), 1500));
+</script>
+</body>
+</html>
