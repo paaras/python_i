@@ -1,0 +1,1354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Python Files and Modules</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/runmode/runmode.min.js"></script>
+<style>
+/* Two colors carry meaning in this deck: yellow is a file, purple is a module. */
+:root{
+  --ink:#14171c;--muted:#636a76;--line:#d6d9df;--code-bg:#f6f7f9;
+  --accent:#1a5fd0;--accent-soft:#e6efff;--hl:#fff2a8;
+  --file:#c99700;--file-soft:#fff8dc;--file-line:#ecd98a;
+  --mod:#6b3fd4;--mod-soft:#efe8fd;
+  --ok:#1e7e34;--ok-soft:#dff3e4;--bad:#c62828;--bad-soft:#fde0e0;--orange:#ffd9a8;
+  --fs:clamp(18px,1.15vw + 7px,30px);--cfs:clamp(15px,0.95vw + 5px,26px);
+  --lfs:calc(var(--cfs)*.94);
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --navh:56px;
+}
+*{box-sizing:border-box;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html,body{margin:0;height:100%;background:#fff;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden}
+.slide{position:fixed;top:0;left:0;right:0;bottom:calc(var(--navh) + env(safe-area-inset-bottom,0px));overflow-y:auto;overflow-x:hidden;padding:36px 48px 24px;display:none;flex-direction:column}
+.slide.active{display:flex}
+.inner{width:100%;max-width:min(1500px,100%);margin:0 auto}
+h1{font-size:clamp(28px,2.2vw + 10px,54px);margin:0 0 22px;line-height:1.15;letter-spacing:-.01em}
+p{font-size:var(--fs);line-height:1.5;margin:0 0 22px;max-width:70ch;text-wrap:pretty}
+.after{margin:20px 0 0}
+.after p:last-child{margin-bottom:0}
+code{font-family:var(--mono)}
+p code,li code,td code,.legend code,.why code{background:var(--code-bg);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:.88em;white-space:nowrap}
+.muted{color:var(--muted)}
+.err{color:var(--bad)}
+.good{color:var(--ok);font-weight:700}
+.badt{color:var(--bad);font-weight:700}
+.label{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin:0 0 7px;font-weight:600}
+.two{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);gap:40px;align-items:start}
+.two.even{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+
+.btn{font:inherit;font-size:17px;padding:8px 15px;border:1.5px solid var(--ink);background:#fff;color:var(--ink);border-radius:7px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:#f0f0f0}
+.btn.primary{background:var(--ink);color:#fff}
+.btn.primary:hover{background:#333}
+.btn:disabled{opacity:.35;cursor:default}
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0 16px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.tab{font:inherit;font-size:17px;padding:7px 14px;border:1.5px solid var(--ink);background:#fff;color:var(--ink);border-radius:7px;cursor:pointer}
+.tab.on{background:var(--ink);color:#fff}
+
+/* syntax colors, shared by the editors and the static code */
+.cm-keyword{color:#8b2fb8;font-weight:600}
+.cm-string{color:#a04a10}
+.cm-number{color:#0b6e8f}
+.cm-comment{color:#7a818c;font-style:italic}
+.cm-builtin{color:#1a5fd0}
+.cm-def{color:#14171c;font-weight:600}
+.code{font-family:var(--mono);font-size:var(--cfs);line-height:1.6;background:var(--code-bg);border:1px solid var(--line);border-radius:9px;padding:13px 17px;white-space:pre;overflow-x:auto;margin:0 0 20px}
+
+/* legend: a piece of code on the left, what it means on the right */
+.legend{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px 18px;align-items:baseline;margin:4px 0 0;font-size:calc(var(--fs)*.9);line-height:1.42}
+.legend .sw{font-family:var(--mono);font-size:var(--lfs);padding:2px 9px;border-radius:5px;white-space:nowrap;background:var(--hl)}
+.legend .sw.b{background:var(--accent-soft)}
+.legend .sw.o{background:var(--orange)}
+.legend .sw.g{background:var(--ok-soft)}
+.legend .sw.m{background:var(--mod-soft)}
+.pts{font-size:calc(var(--fs)*.9);line-height:1.45;margin:4px 0 0;padding-left:1.15em;max-width:70ch}
+.pts li{margin:0 0 9px}
+
+/* ---------- lab: code you can run, the files it can see, and its output ---------- */
+.lab{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);gap:36px;align-items:start}
+.lab.solo{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)}
+.lab .CodeMirror{height:auto;font-family:var(--mono);font-size:var(--lfs);line-height:1.55;border:1px solid var(--line);border-radius:0 9px 9px 9px;background:var(--code-bg);color:var(--ink)}
+.lab.onepy .CodeMirror{border-radius:9px}
+.lab .CodeMirror-gutters{background:var(--code-bg);border-right:1px solid var(--line)}
+.lab .CodeMirror-linenumber{color:#a2a8b2}
+.lab .CodeMirror-scroll{min-height:3em}
+.lab .CodeMirror pre.CodeMirror-line{padding-left:10px}
+.CodeMirror textarea{font-size:16px}
+.pytabs{display:flex;gap:4px;margin:0}
+.pytab{font-family:var(--mono);font-size:calc(var(--lfs)*.92);padding:5px 13px 6px;border:1px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0;background:#fff;color:var(--muted);cursor:pointer}
+.pytab.on{background:var(--code-bg);color:var(--ink);font-weight:700}
+.pytab.mod.on{background:var(--mod-soft);color:var(--mod);border-color:#cdbcf3}
+.lab.onepy .pytabs{display:none}
+.out{font-family:var(--mono);font-size:var(--lfs);line-height:1.5;background:#fff;border:1.5px solid var(--ink);border-radius:9px;padding:11px 15px;white-space:pre-wrap;word-break:break-word;margin:0 0 16px;min-height:3.1em;max-height:15.5em;overflow-y:auto}
+.runs{font-size:calc(var(--fs)*.85);color:var(--muted);margin:-6px 0 14px;min-height:1.4em}
+.lab .side > :last-child{margin-bottom:0}
+.lab.compact .paper .pbody{max-height:6.2em}
+.lab.compact .out{max-height:9.4em}
+
+/* files */
+.fbox{margin:0 0 18px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:0}
+.chip{font-family:var(--mono);font-size:calc(var(--lfs)*.92);display:inline-flex;align-items:center;gap:7px;padding:5px 12px 6px 9px;border:1px solid var(--file-line);border-bottom:0;border-radius:8px 8px 0 0;background:#fff;color:var(--muted);cursor:pointer}
+.chip::before{content:"";width:.72em;height:.9em;border:1.5px solid currentColor;border-radius:2px;background:linear-gradient(225deg,currentColor 0 .26em,transparent .26em)}
+.chip.on{background:var(--file-soft);color:#6b5200;font-weight:700}
+.chip .tag{font-family:system-ui,sans-serif;font-size:.72em;font-weight:700;color:#fff;background:var(--ok);border-radius:20px;padding:0 7px;line-height:1.5}
+.chip.flash{animation:chipflash 1.4s}
+@keyframes chipflash{0%,40%{background:var(--ok-soft)}}
+.paper{border:1px solid var(--file-line);border-radius:0 9px 9px 9px;background:var(--file-soft);overflow:hidden}
+.paper .phead{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:4px 8px 4px 13px;font-size:13px;color:#7a6520;border-bottom:1px solid var(--file-line);min-height:30px}
+.paper .phead .seg{display:flex;gap:4px}
+.paper .phead button{font:inherit;font-size:13px;border:1px solid var(--file-line);background:#fff;border-radius:5px;padding:2px 9px;cursor:pointer;color:#6b5200}
+.paper .phead button.on{background:#6b5200;color:#fff;border-color:#6b5200}
+.paper .pbody{max-height:11.6em;overflow:auto;font-family:var(--mono);font-size:var(--lfs);line-height:1.5;padding:9px 14px;white-space:pre;background:#fffdf3}
+.paper .pbody.wrap{white-space:pre-wrap;word-break:break-word}
+.paper .pbody .empty{font-family:system-ui,sans-serif;color:#9a8a50;font-size:.9em}
+.nl{font-size:.74em;color:#fff;background:#b08900;border-radius:4px;padding:0 4px;margin-left:2px;vertical-align:.08em}
+.paper table{border-collapse:collapse;font-size:.94em;white-space:nowrap}
+.paper th,.paper td{border:1px solid var(--file-line);padding:1px 11px;text-align:left}
+.paper th{background:#f6e9a9;position:sticky;top:-9px}
+.lineflash{animation:lineflash 1.6s}
+@keyframes lineflash{0%,45%{background:#c9efd2}}
+
+/* title */
+#s1 .inner{margin:auto;text-align:center}
+#s1 h1{font-size:clamp(42px,5.4vw,84px);margin-bottom:10px}
+#s1 .sub{margin:0 auto 30px;color:var(--muted)}
+.pipe{display:grid;grid-template-columns:minmax(0,.8fr) auto minmax(0,1.15fr) auto minmax(0,1.15fr);gap:14px;align-items:center;text-align:left;max-width:1320px;margin:0 auto}
+.pipe .arrow{font-size:26px;color:var(--muted)}
+.pipe .code{margin:0;font-size:calc(var(--cfs)*.72);line-height:1.5;padding:11px 14px}
+.pipe .paper .pbody{font-size:calc(var(--cfs)*.72);max-height:none}
+.chart{border:1.5px solid var(--ink);border-radius:9px;padding:11px 14px;font-size:calc(var(--cfs)*.72);display:grid;gap:6px}
+.chart .crow{display:grid;grid-template-columns:minmax(0,1fr);gap:1px}
+.chart .cname{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chart .cbar{height:.85em;background:var(--ink);border-radius:3px;width:0;transition:width 1s cubic-bezier(.2,.8,.2,1)}
+.hint-nav{margin:34px auto 0;font-size:17px}
+
+/* small pictures */
+.cells{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin:0 0 6px}
+.cell{display:flex;flex-direction:column;align-items:center}
+.cell .idx{font-family:var(--mono);font-size:14px;color:var(--muted);margin-bottom:3px}
+.cell .box{font-family:var(--mono);font-size:var(--lfs);border:2px solid var(--ink);border-radius:6px;padding:5px 12px;background:#fff}
+.strline{font-family:var(--mono);font-size:var(--lfs);background:var(--file-soft);border:1px solid var(--file-line);border-radius:7px;padding:6px 12px;display:inline-block;margin:0 0 8px}
+.down{color:var(--muted);font-size:20px;margin:0 0 6px 18px}
+.c0{--k:#1a5fd0;--ks:#e1ebff}.c1{--k:#b4540a;--ks:#ffe9d2}.c2{--k:#1e7e34;--ks:#dcf3e2}.c3{--k:#6b3fd4;--ks:#ece4fd}
+.kv{background:var(--ks);color:var(--k);border-radius:4px;padding:0 4px;font-weight:600}
+.dict{border:2.5px solid var(--ink);border-radius:12px;padding:8px 14px 10px;display:inline-block;min-width:min(100%,19em)}
+.dict .dh{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px}
+.dict .dr{display:grid;grid-template-columns:9.2em auto;gap:10px;font-family:var(--mono);font-size:var(--lfs);line-height:1.75}
+.modes{border-collapse:collapse;font-size:calc(var(--fs)*.88);line-height:1.4;margin:2px 0 0}
+.modes td{padding:7px 14px 7px 0;vertical-align:top;border-bottom:1px solid var(--line)}
+.modes tr:last-child td{border-bottom:0}
+.modes td:first-child{white-space:nowrap}
+.steps{font-size:var(--fs);line-height:1.45;margin:0;padding-left:1.3em;max-width:68ch}
+.steps li{margin:0 0 13px;padding-left:4px}
+.steps b.ui{font-weight:600;border:1.5px solid var(--ink);border-radius:6px;padding:0 8px;font-size:.86em;white-space:nowrap}
+a.btn{text-decoration:none;display:inline-block}
+.src{font-size:14px;color:var(--muted);margin:14px 0 0;max-width:none}
+.src a{color:inherit}
+.why{font-size:var(--fs);line-height:1.5;margin:0 0 16px;border-left:5px solid var(--accent);background:var(--accent-soft);padding:12px 18px;border-radius:0 10px 10px 0;max-width:70ch}
+.why.wait{border-color:var(--line);background:var(--code-bg);color:var(--muted)}
+
+/* review */
+.recap{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:26px;align-items:stretch;margin:0 0 18px}
+.recap .rc{font-family:var(--mono);font-size:var(--lfs);white-space:pre;background:var(--code-bg);padding:2px 18px;border-left:1px solid var(--line);border-right:1px solid var(--line);line-height:1.55}
+.recap .rc.first{border-top:1px solid var(--line);border-radius:9px 9px 0 0;padding-top:11px}
+.recap .rc.last{border-bottom:1px solid var(--line);border-radius:0 0 9px 9px;padding-bottom:11px}
+.recap .ra{font-size:calc(var(--fs)*.8);display:flex;align-items:center;gap:10px;color:#333;line-height:1.3}
+.tag{font-family:var(--mono);font-size:.85em;font-weight:700;border-radius:5px;padding:1px 8px;white-space:nowrap}
+
+/* practice */
+.results{list-style:none;padding:0;margin:0 0 14px;font-size:calc(var(--fs)*.9);line-height:1.45}
+.results li{padding:4px 0}
+.results li small{display:block;color:var(--muted);font-size:.88em;padding-left:1.5em}
+.hint{font-size:calc(var(--fs)*.9);border-left:5px solid #e0c200;background:#fffbe6;padding:10px 16px;margin:0 0 14px;display:none;max-width:62ch;line-height:1.45}
+
+/* ---------- stepper: run code one line at a time and watch the file and the variables ---------- */
+.stepper{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:44px;align-items:start}
+.scode{border:1px solid var(--line);border-radius:9px;background:var(--code-bg);padding:9px 0;font-family:var(--mono);font-size:var(--cfs);line-height:1.6;margin:0 0 12px;overflow-x:auto}
+.sname{font-family:var(--mono);font-size:calc(var(--cfs)*.8);color:var(--muted);margin:0 0 4px 2px}
+.sname.mod{color:var(--mod);font-weight:700}
+.ln{display:flex;padding:0 14px 0 4px}
+.ln .num{width:2em;color:#a2a8b2;text-align:right;padding-right:6px;flex:none;user-select:none}
+.ln .arr{width:1.4em;flex:none;color:var(--accent);text-align:center}
+.ln .txt{white-space:pre}
+.ln.cur{background:var(--hl)}
+.ln.cur .arr::before{content:"\25B6"}
+.stepper .controls{margin:6px 0 16px}
+.stepper .cnt{font-size:16px}
+.stepper .note{font-size:var(--fs);line-height:1.45;margin:0;min-height:4.4em;max-width:62ch}
+.stepper .out{min-height:3.1em;font-size:var(--cfs)}
+.stepper .paper{border-radius:9px;margin:0 0 18px}
+.stepper .paper .pbody{font-size:var(--cfs);max-height:none;padding:7px 0}
+.stepper .paper .phead{font-family:var(--mono);font-size:calc(var(--cfs)*.8);font-weight:700;color:#6b5200;min-height:34px}
+.stepper .paper .phead .st{font-family:system-ui,sans-serif;font-size:13px;font-weight:600;border-radius:20px;padding:1px 10px;background:#fff;border:1px solid var(--file-line);color:#7a6520}
+.stepper .paper .phead .st.open{background:var(--ok);border-color:var(--ok);color:#fff}
+.rl{padding:0 14px;min-height:1.5em}
+.rl.cur{background:var(--hl)}
+.rl.new{animation:lineflash 1.4s}
+.rl .empty{padding:0}
+.svars{display:grid;grid-template-columns:auto minmax(0,1fr);gap:9px 14px;align-items:center;margin:0 0 18px;min-height:2.2em}
+.svars .vn{font-family:var(--mono);font-weight:700;font-size:var(--cfs)}
+.svars .vv{font-family:var(--mono);font-size:var(--cfs);background:var(--accent-soft);border:1px solid #b9cdf5;border-radius:6px;padding:2px 10px;justify-self:start;max-width:100%;overflow-wrap:anywhere}
+.svars .vv.fresh{background:var(--hl);border-color:#e0c200}
+.svars .vv.fileref{background:var(--file-soft);border-color:var(--file-line);font-family:system-ui,sans-serif;font-size:calc(var(--fs)*.8)}
+.svars .none{grid-column:1/-1;color:#a2a8b2;font-size:16px}
+.svars .dict{min-width:0;padding:5px 12px 7px}
+.svars .dict .dr{line-height:1.5}
+.lab .sidenotes .after{margin-top:4px}
+.lab .sidenotes p{font-size:calc(var(--fs)*.94)}
+.pic{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:var(--cfs);margin:0 0 20px}
+.pic .v{background:var(--accent-soft);border:1px solid #b9cdf5;border-radius:6px;padding:3px 12px}
+.pic .ar{color:var(--muted)}
+@media (max-width:900px){ .stepper{grid-template-columns:minmax(0,1fr);gap:20px} .stepper .note{min-height:0} }
+@media (max-width:600px){ .ln .txt{white-space:pre-wrap;word-break:break-word;min-width:0} }
+
+/* nav */
+.nav{position:fixed;left:0;right:0;bottom:0;height:calc(var(--navh) + env(safe-area-inset-bottom,0px));padding:0 18px env(safe-area-inset-bottom,0px);border-top:1px solid #e5e5e5;display:flex;align-items:center;justify-content:space-between;background:#fff;z-index:10}
+.nav .right{display:flex;gap:10px;align-items:center}
+#counter{font-size:16px;color:var(--muted);min-width:64px;text-align:center}
+#pystat{font-size:14px}
+.bar{position:fixed;left:0;bottom:calc(var(--navh) + env(safe-area-inset-bottom,0px));height:3px;background:var(--ink);transition:width .3s;z-index:10}
+.tch{display:none}
+@media (hover:none) and (pointer:coarse){ .kb{display:none} .tch{display:inline} }
+
+@media (max-height:780px) and (min-width:901px){
+  :root{--fs:clamp(17px,0.85vw + 7px,26px);--cfs:clamp(14px,0.75vw + 5px,22px)}
+  .slide{padding-top:22px;padding-bottom:12px}
+  h1{margin-bottom:14px}
+  p{margin-bottom:14px}
+  .paper .pbody{max-height:9.2em}
+  .out{max-height:12.5em}
+  .controls{margin:9px 0 12px}
+  .pts li{margin-bottom:6px}
+  .legend{gap:8px 16px}
+}
+@media (max-width:900px){
+  .two,.two.even{grid-template-columns:minmax(0,1fr);gap:20px}
+  /* on a phone the output goes right under the Run button, and the notes come after it */
+  .lab,.lab.solo{display:flex;flex-direction:column;gap:0}
+  .lab .main,.lab .side{display:contents}
+  .lab .notes{order:5;margin-top:6px}
+  .lab .sidenotes{order:6;margin-top:14px}
+  .lab .notes:empty,.lab .sidenotes:empty{display:none}
+  .slide{padding:22px 16px 28px}
+  .pipe{grid-template-columns:minmax(0,1fr);max-width:520px}
+  .pipe .arrow{transform:rotate(90deg);justify-self:center}
+  .pipe .code,.pipe .paper .pbody,.chart{font-size:var(--lfs)}
+}
+@media (max-width:600px){
+  :root{--fs:17px;--cfs:15px;--navh:60px}
+  h1{font-size:27px;margin-bottom:14px}
+  #s1 h1{font-size:44px}
+  #pystat{display:none}
+  .nav{padding-left:12px;padding-right:12px}
+  .nav .right{width:100%;justify-content:space-between}
+  .legend{grid-template-columns:minmax(0,1fr);gap:3px}
+  .legend .sw{justify-self:start;margin-top:9px;white-space:pre-wrap}
+  .code{white-space:pre-wrap;word-break:break-word;padding:10px 12px}
+  .recap{grid-template-columns:minmax(0,1fr)}
+  .recap .rc{white-space:pre-wrap;border:1px solid var(--line);border-radius:8px;padding:6px 12px}
+  .recap .rc.blank,.recap .ra:empty{display:none}
+  .recap .ra{padding:3px 0 10px 4px}
+  .dict .dr{grid-template-columns:auto auto;justify-content:start}
+  .modes td{display:block;padding:2px 0;border:0}
+  .modes tr td:last-child{padding-bottom:10px}
+}
+</style>
+</head>
+<body>
+
+<!-- 1 -->
+<section class="slide" id="s1"><div class="inner">
+  <h1>Files and Modules</h1>
+  <div class="pipe">
+    <div class="paper" style="border-radius:9px"><div class="phead"><span>candy.csv</span></div><div class="pbody" id="s1file"></div></div>
+    <div class="arrow">&#9654;</div>
+    <div class="code" id="s1code"></div>
+    <div class="arrow">&#9654;</div>
+    <pre class="out" id="s1out" style="margin:0;font-size:calc(var(--cfs)*.72);max-height:none"></pre>
+  </div>
+  <p class="muted hint-nav"><span class="kb">Use the arrow keys or the buttons at the bottom to move between slides</span><span class="tch">Use the buttons at the bottom to move between slides</span></p>
+</div></section>
+
+<!-- 2 -->
+<section class="slide" id="s2"><div class="inner">
+  <h1>Programs forget everything</h1>
+  <p>Every program we've written so far keeps its information in variables. This program is supposed to count how many times it has been run. Press <b>Run</b> a few times and see what it prints.</p>
+  <div id="s2lab"></div>
+</div></section>
+
+<!-- 3 -->
+<section class="slide" id="s3"><div class="inner">
+  <h1>Reading a file</h1>
+  <p>A file has a name, like <code>groceries.txt</code>, and it holds text. You can see what's in this file on the right. A program has to open a file before it can read it. Step through the code to see what each line does.</p>
+  <div id="s3step"></div>
+</div></section>
+
+<!-- 4 -->
+<section class="slide" id="s4"><div class="inner">
+  <h1>Reading line by line</h1>
+  <p>Most of the time we want to go through a file one line at a time. A <code>for</code> loop over a file gives us the next line each time around, the same way a loop over a list gives us the next item. Watch the output as you step through.</p>
+  <div id="s4step"></div>
+</div></section>
+
+<!-- 5 -->
+<section class="slide" id="s5"><div class="inner">
+  <h1>Removing the \n</h1>
+  <p>We almost never want the <code>\n</code> that comes at the end of each line. Strings have a method called <code>strip()</code> that gives back the same string with the <code>\n</code> taken off the end. It also takes off any spaces at the start or the end. So <code>"milk\n".strip()</code> is <code>"milk"</code>.</p>
+  <div id="s5lab"></div>
+  <div class="after"><p>Run the program to see the empty lines again, then press <b>Fix it</b>. <code>strip()</code> doesn't change <code>line</code> itself. It gives back a new string, so we write <code>line = line.strip()</code> to put the new string back in <code>line</code>. You'll do this almost every time you read lines from a file.</p></div>
+</div></section>
+
+<!-- 6 -->
+<section class="slide" id="s6"><div class="inner">
+  <h1>Numbers in a file</h1>
+  <p><code>scores.txt</code> has a quiz score on each line, and we want to add them up. Everything we read from a file is a string, even when it looks like a number. The same thing happened with <code>input()</code>, and the fix is the same. We turn the string into a number with <code>int()</code>.</p>
+  <div id="s6step"></div>
+</div></section>
+
+<!-- 7 -->
+<section class="slide" id="s7"><div class="inner">
+  <h1>Writing a file</h1>
+  <p>A program can also put text into a file. To do that, we give <code>open</code> a second value, <code>"w"</code>, which stands for write. Then we use <code>f.write()</code> to add text to the file.</p>
+  <div id="s7step"></div>
+</div></section>
+
+<!-- 8 -->
+<section class="slide" id="s8"><div class="inner">
+  <h1>"w" starts over and "a" adds on</h1>
+  <p>Opening a file with <code>"w"</code> empties the file first, even if it already had text in it. Run this program three times and look at <code>log.txt</code> after each run. Then change <code>"w"</code> to <code>"a"</code>, which stands for append, and run it three more times.</p>
+  <div id="s8lab"></div>
+</div></section>
+
+<!-- 9 -->
+<section class="slide" id="s9"><div class="inner">
+  <h1>A program that remembers</h1>
+  <p>Now we can fix the counter from the second slide. The count is kept in a file called <code>count.txt</code>, which has a 0 in it to start. The program reads the number from the file, adds 1 to it, and writes the new number back to the file. Run it a few times.</p>
+  <div id="s9lab"></div>
+  <div class="after"><p>The variable <code>runs</code> still disappears when the program ends, but the number is saved in <code>count.txt</code> before that happens. We open the file with <code>"w"</code> the second time because we want the new count to replace the old one. <code>write</code> only accepts a string, so we use <code>str()</code> to turn the number into a string first.</p></div>
+</div></section>
+
+<!-- 10 -->
+<section class="slide" id="s10"><div class="inner">
+  <h1>CSV files</h1>
+  <div class="two even">
+    <div>
+      <p>A lot of information comes as a table, with rows and columns. A <b>CSV file</b> is a table saved as text. Each line of the file is one row of the table, and commas separate the columns. CSV stands for comma-separated values.</p>
+      <p>The first line is different from the rest. It has the names of the columns. Press <b>Table</b> above the file to see it as a table, and <b>Text</b> to go back.</p>
+    </div>
+    <div>
+      <div id="s10file"></div>
+      <p style="margin:18px 0 0">This file is from a 2017 survey by the news site FiveThirtyEight. People were shown two candies at a time and picked the one they liked more. <code>win_percent</code> is the percent of the time each candy was picked. The other two columns say whether the candy has chocolate and whether it is fruity.</p>
+      <p class="src">Data from FiveThirtyEight, "The Ultimate Halloween Candy Power Ranking" (CC BY 4.0)</p>
+    </div>
+  </div>
+</div></section>
+
+<!-- 11 -->
+<section class="slide" id="s11"><div class="inner">
+  <h1>Modules</h1>
+  <p>Python comes with a lot of code that is already written, like a function that finds a square root and a function that picks a random number. This code is kept in files called <b>modules</b>. To use a module, we <code>import</code> it by name at the top of our program.</p>
+  <div id="s11lab"></div>
+</div></section>
+
+<!-- 12 -->
+<section class="slide" id="s12"><div class="inner">
+  <h1>The csv module</h1>
+  <p>Python has a module for reading CSV files, called <code>csv</code>. The part of it we'll use is <code>csv.DictReader</code>. We give it an open file and loop over it, and each time around the loop it gives us the next row of the table as a dictionary.</p>
+  <div id="s12step"></div>
+</div></section>
+
+<!-- 13 -->
+<section class="slide" id="s13"><div class="inner">
+  <h1>Asking the file a question</h1>
+  <p>Now we can ask questions about the candies. Which ones win more than 75 percent of the time? The loop goes through every row, and the <code>if</code> only prints the rows where the win percent is over 75. The win percent is a string when it comes out of the file, so we turn it into a number with <code>int()</code> before we compare it.</p>
+  <div id="s13lab"></div>
+  <div class="after"><p>Change 75 to another number and run it again. Then try changing the <code>if</code> so that it prints only the fruity candies. The <code>fruity</code> column is <code>"yes"</code> for those.</p></div>
+</div></section>
+
+<!-- 14 -->
+<section class="slide" id="s14"><div class="inner">
+  <h1>The statistics module</h1>
+  <p>What is the average win percent? First we put every win percent in a list called <code>wins</code>. Then we use a module called <code>statistics</code>. It has a function called <code>mean</code> that takes a list of numbers and returns their average.</p>
+  <div id="s14lab"></div>
+  <div class="after"><p>"Mean" is another word for average. <code>statistics.median</code> returns the middle number, which is the number that would be in the middle if the list were sorted from smallest to biggest.</p></div>
+</div></section>
+
+<!-- 15 -->
+<section class="slide" id="s15"><div class="inner">
+  <h1>Chocolate or fruity?</h1>
+  <p>Do people like chocolate more than fruity candy? To find out, we make two lists. If a candy has <code>"yes"</code> in the <code>chocolate</code> column, its win percent goes in the <code>chocolate</code> list. If it has <code>"yes"</code> in the <code>fruity</code> column, its win percent goes in the <code>fruity</code> list. Make a guess, then run the code.</p>
+  <div id="s15lab"></div>
+  <div class="after"><p>Chocolate candies win about 61 percent of the time, and fruity candies win 44 percent of the time. People picked chocolate a lot more often.</p></div>
+</div></section>
+
+<!-- 16 -->
+<section class="slide" id="s16"><div class="inner">
+  <h1>Making your own module</h1>
+  <p>A module is a file of Python code, so we can make our own. This program has two files. <code>candy_tools.py</code> is our module, and it has two functions in it. <code>main.py</code> imports the module and uses those functions.</p>
+  <div id="s16lab"></div>
+  <div class="after"><p>Click the <code>candy_tools.py</code> tab to read the two functions. <code>load</code> reads a CSV file and returns a list that has a dictionary for every row. <code>average</code> adds up one column of those rows and divides by the number of rows. In <code>main.py</code>, the name we import is the file's name without the <code>.py</code>, and after that it works the way <code>math</code> did. Any other program in the same folder can import <code>candy_tools</code> too.</p></div>
+</div></section>
+
+<!-- 17 -->
+<section class="slide" id="s17"><div class="inner">
+  <h1>What import does</h1>
+  <p>What does Python do when it gets to an <code>import</code> line? It goes to that file and runs it from top to bottom. Then it comes back and continues with the next line. The yellow line shows which line is running, so watch it move between the two files.</p>
+  <div id="s17step"></div>
+</div></section>
+
+<!-- 18 -->
+<section class="slide" id="s18"><div class="inner">
+  <h1>Tests in a module</h1>
+  <p>We want the test to run when we run <code>tools.py</code> ourselves, and to stay out of the way when another file imports it. Python gives every file a variable called <code>__name__</code>, with two underscores on each side. In the file that we ran, it is set to <code>"__main__"</code>. In a file that was imported, it is set to the module's name, like <code>"tools"</code>. So the <code>if</code> at the bottom of <code>tools.py</code> is only true when <code>tools.py</code> is the file we ran.</p>
+  <div id="s18lab"></div>
+  <div class="after"><p>Run <code>main.py</code>, and only one line prints. Then click the <code>tools.py</code> tab and press Run again. Now <code>tools.py</code> is the file being run, so its test prints. The Run button always runs the tab that is open, here and in the compiler.</p></div>
+</div></section>
+
+<!-- 19 -->
+<section class="slide" id="s19"><div class="inner">
+  <h1>A class in a module</h1>
+  <p>A module can have a class in it too. <code>candy.py</code> has a <code>Candy</code> class, and a function called <code>load_candies</code> that reads the file and makes a <code>Candy</code> object for every row. Read both tabs, then run <code>main.py</code>.</p>
+  <div id="s19lab"></div>
+  <div class="after"><p>The first line of <code>main.py</code> is a second way to import. The module's name goes after <code>from</code>, and the names we want out of it go after <code>import</code>. Now we can write <code>Candy(...)</code> without putting <code>candy.</code> in front of it.</p><p><a class="btn" target="_blank" rel="noopener" href="https://paaras.github.io/python_i/compiler.html#mAAKRAQrh7eeaCitBMVAwzol2YXA_-QK8TPyfnFLN9hLuUEJhc3sOuC74M8vzxzA5QAgshg89660doyuF0Q6jZ55-swVs1RepDhDcOgNC1KyIz7-SSuNzrsX-nJYKWu2qJnZO4_JiQYR-U8bd3satNz8NOIwSzJI7piqGvKoYCVKXosKr3RWbQEL6apKqjGmBLXy5Y0XjOpz11gPmhqZQWEn8G5x2C-EJeykeL_5A3jTqEIfF0Gx05waUoxPTv1hiY4DjyyuAEdBvkA0P26DDp-U41I7rwRgBcT_2K9wvM0AC9PXdzimY9WE4rVbPuNM52T8fAti5d0OZeOiVOH79Jgw2dShsbr-RenyxNqYKiT_XVyZ9fmKz4FZQQIKhqi0WEeWpRR9UBQxuqP48S2GBE8ukzANL_LUx54nSDfCdNMB4wuDlbhqasVLToZeh7roVNEOhl8S7LWr4Luv9vz-_B_rT4GJJGJxTNlVoY8IkKSuz4UrbneIm1D_4xA-Z7nmLRa1rDRCvlTdgxXIS9hYuZe87tmPfCASvae7LeKj1E68LG-l5d1o_5AL15ftnbh5I5dENHM1IbEWz-CTMuUyi26ne2yK9aKHVnvGwuCx26rjQlDyrJOAuOKirr3nuJQPBwvLcG7jNpqATJVnjHI1Mly2pVrcRzXocieOcDW2-ps3uS8tbJcSFwuXBy6_9xp3GvmU7ktl7nBszkENS_z-LZMrCNmTuiKIJMFRGYcY-iIiRtvY7xoIivYHAtqwOEjz1X3QvZc06lOhK0kfvfvXvYkcFPtDIm7KnPFglvk-q_hkoo-SasV5_ikX3NWcLmhVqPaNZ3f0VNblcTGfgcTn-bc_eFVMAXUbSxef7YKW5rGypJSADl8QPxM4JJGxn1Xah2tgTICX5ZxktOZJumICTR7k37a7gaSMev0ny_Y7oIrOsSUYYpGDjnOJqUK3ousCrV4QFi1GZiQL_ecze54VECz1BSO2DzoX-Z-aZmm0sHIUr5FxKidDxFbJxi8fiVYW0lq8VyO8r51dQ9jLFfAlS9D57QJZpFlPcYwaz8zDSj6n7lrQthtE0TZydRJMt4dsv4-RbaCcMj_ScRmJl8hmnrHMQbMFF7UmOAB3jQHDB6u-rYyxvXJpUEmR3giN5xqBcJSkh6XmewRy547MU48C_3oVVIv93GcoyS2USIlMoJ4wTXuWiI_39pteK4nPEgypwOIk6hOsfSYSMYknPjsFhoGNvICK_FjX41dNn-8mCIllyMEmKwmqR4vVTsQMkQ1eoBzBu_UoBAEEMl6N4hCBGKT2mB3XAQSyzNB2Glfw6lnDknMI">Open this example in the compiler</a></p></div>
+</div></section>
+
+<!-- 20 -->
+<section class="slide" id="s20"><div class="inner">
+  <h1>Common mistakes</h1>
+  <p>Run the code to see what goes wrong, then press <b>Show fix</b></p>
+  <div class="tabs" id="s20tabs"></div>
+  <div id="s20lab"></div>
+</div></section>
+
+<!-- 21 -->
+<section class="slide" id="s21"><div class="inner">
+  <h1>Review</h1>
+  <div class="recap" id="s21recap"></div>
+  <p>A file keeps text after a program ends, and a module keeps code so that more than one program can use it</p>
+</div></section>
+
+<!-- 22 -->
+<section class="slide" id="s22"><div class="inner">
+  <h1>Practice</h1>
+  <div class="tabs" id="s22tabs"></div>
+  <p id="s22desc"></p>
+  <div id="s22lab"></div>
+</div></section>
+
+<div class="bar" id="bar"></div>
+<div class="nav">
+  <span id="pystat" class="muted">Python: not loaded yet</span>
+  <div class="right">
+    <button class="btn" id="prev">&#9664; Back</button>
+    <span id="counter"></span>
+    <button class="btn primary" id="next">Next &#9654;</button>
+  </div>
+</div>
+
+<script>
+/* ---------- helpers ---------- */
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const $ = id => document.getElementById(id);
+function hl(text){
+  let html = '';
+  CodeMirror.runMode(text, 'python', (tok, style) => {
+    const t = esc(tok);
+    html += style ? `<span class="${style.split(' ').map(s => 'cm-' + s).join(' ')}">${t}</span>` : t;
+  });
+  return html;
+}
+function makeTabs(el, names, onSel){
+  el.innerHTML = '';
+  names.forEach((n, i) => { const b = document.createElement('button'); b.className = 'tab'; b.textContent = n; b.onclick = () => sel(i); el.appendChild(b); });
+  function sel(i){ [...el.children].forEach((b, k) => b.classList.toggle('on', k === i)); onSel(i); }
+  sel(0);
+}
+const legend = rows => `<div class="legend">${rows.map(([c, sw, t]) => `<span class="sw ${c}">${esc(sw)}</span><span>${t}</span>`).join('')}</div>`;
+const pts = items => `<ul class="pts">${items.map(t => `<li>${t}</li>`).join('')}</ul>`;
+
+/* ---------- data ---------- */
+const CANDY = `name,chocolate,fruity,win_percent
+100 Grand,yes,no,67
+3 Musketeers,yes,no,68
+Air Heads,no,yes,52
+Almond Joy,yes,no,50
+Baby Ruth,yes,no,57
+Boston Baked Beans,no,no,23
+Candy Corn,no,no,38
+Caramel Apple Pops,no,yes,34
+Charleston Chew,yes,no,39
+Chewy Lemonhead Fruit Mix,no,yes,36
+Chiclets,no,yes,24
+Dots,no,yes,42
+Dum Dums,no,yes,40
+Fruit Chews,no,yes,43
+Fun Dip,no,yes,39
+Gobstopper,no,yes,47
+Haribo Gold Bears,no,yes,57
+Haribo Happy Cola,no,no,34
+Haribo Sour Bears,no,yes,51
+Haribo Twin Snakes,no,yes,42
+Hershey's Kisses,yes,no,55
+Hershey's Krackel,yes,no,62
+Hershey's Milk Chocolate,yes,no,56
+Hershey's Special Dark,yes,no,59
+Jawbusters,no,yes,28
+Junior Mints,yes,no,57
+Kit Kat,yes,no,77
+Laffy Taffy,no,yes,41
+Lemonhead,no,yes,39
+Lifesavers Big Ring Gummies,no,yes,53
+M&M's,yes,no,67
+Mike & Ike,no,yes,46
+Milk Duds,yes,no,55
+Milky Way,yes,no,73
+Milky Way Midnight,yes,no,61
+Milky Way Simply Caramel,yes,no,64
+Mounds,yes,no,48
+Mr Good Bar,yes,no,54
+Nerds,no,yes,55
+Nestle Butterfinger,yes,no,71
+Nestle Crunch,yes,no,66
+Nestle Smarties,yes,no,38
+Nik L Nip,no,yes,22
+Now & Later,no,yes,39
+Payday,no,no,46
+Peanut Butter M&M's,yes,no,72
+Peanut M&M's,yes,no,70
+Pixie Sticks,no,no,38
+Pop Rocks,no,yes,41
+Red Vines,no,yes,37
+Reese's Miniatures,yes,no,82
+Reese's Peanut Butter Cup,yes,no,84
+Reese's Pieces,yes,no,73
+Reese's Stuffed with Pieces,yes,no,73
+Ring Pop,no,yes,35
+Rolo,yes,no,66
+Root Beer Barrels,no,no,30
+Runts,no,yes,43
+Sixlets,yes,no,35
+Skittles Original,no,yes,63
+Skittles Wild Berry,no,yes,55
+Smarties,no,yes,46
+Snickers,yes,no,77
+Snickers Crisper,yes,no,60
+Sour Patch Kids,no,yes,60
+Sour Patch Tricksters,no,yes,53
+Starburst,no,yes,67
+Strawberry Bon Bons,no,yes,35
+Sugar Babies,no,no,33
+Sugar Daddy,no,no,32
+Super Bubble,no,yes,27
+Swedish Fish,no,yes,55
+Tootsie Pop,yes,yes,49
+Tootsie Roll Juniors,yes,no,43
+Tootsie Roll Midgies,yes,no,46
+Tootsie Roll Snack Bars,yes,no,50
+Trolli Sour Bites,no,yes,47
+Twix,yes,no,82
+Twizzlers,no,yes,46
+Warheads,no,yes,39
+Welch's Fruit Snacks,no,yes,44
+Werther's Original Caramel,no,no,42
+Whoppers,yes,no,50
+`;
+const GROCERIES = 'milk\neggs\nbread\napples\n';
+const SCORES = '88\n92\n79\n95\n';
+function parseCSV(text){
+  const rows = [];
+  for (const line of text.split('\n')){
+    if (!line.trim()) continue;
+    const cells = []; let cur = '', q = false;
+    for (let i = 0; i < line.length; i++){
+      const ch = line[i];
+      if (q){ if (ch === '"'){ if (line[i + 1] === '"'){ cur += '"'; i++; } else q = false; } else cur += ch; }
+      else if (ch === '"') q = true;
+      else if (ch === ','){ cells.push(cur); cur = ''; }
+      else cur += ch;
+    }
+    cells.push(cur); rows.push(cells);
+  }
+  return rows;
+}
+
+/* ---------- Python (Pyodide) ---------- */
+const PY_HELPERS = String.raw`
+import sys, os, json, shutil, importlib, traceback
+_W = '/work'
+sys.dont_write_bytecode = True
+
+def _lab_run(files_json, entry):
+    os.makedirs(_W, exist_ok=True)
+    os.chdir(_W)
+    for n in os.listdir(_W):
+        p = _W + '/' + n
+        if os.path.isdir(p):
+            shutil.rmtree(p, ignore_errors=True)
+        else:
+            os.remove(p)
+    files = json.loads(files_json)
+    for name, text in files.items():
+        with open(name, 'w', encoding='utf-8', newline='') as f:
+            f.write(text)
+    if _W not in sys.path:
+        sys.path.insert(0, _W)
+    for name, mod in list(sys.modules.items()):
+        if (getattr(mod, '__file__', None) or '').startswith(_W + '/'):
+            del sys.modules[name]
+    for name in files:
+        if name.endswith('.py'):
+            sys.modules.pop(name[:-3], None)
+    importlib.invalidate_caches()
+    err = None
+    try:
+        with open(entry, encoding='utf-8') as f:
+            src = f.read()
+        g = {'__name__': '__main__', '__file__': _W + '/' + entry}
+        exec(compile(src, _W + '/' + entry, 'exec'), g)
+        g.clear()
+    except SystemExit:
+        pass
+    except BaseException as e:
+        loc = None
+        if isinstance(e, SyntaxError) and (e.filename or '').startswith(_W + '/'):
+            loc = (e.filename[len(_W) + 1:], e.lineno)
+        t = e.__traceback__
+        while t is not None:
+            fn = t.tb_frame.f_code.co_filename
+            if fn.startswith(_W + '/'):
+                loc = (fn[len(_W) + 1:], t.tb_lineno)
+            t = t.tb_next
+        last = traceback.format_exception_only(type(e), e)[-1].strip()
+        many = sum(1 for n in files if n.endswith('.py')) > 1
+        where = ''
+        if loc:
+            where = ('Error in %s on line %s\n' % loc) if many else ('Error on line %s\n' % loc[1])
+        err = where + last
+        e.__traceback__ = None
+    sys.stdout.flush()
+    import gc; gc.collect()
+    out = {}
+    for n in sorted(os.listdir(_W)):
+        p = _W + '/' + n
+        if os.path.isfile(p):
+            try:
+                with open(p, encoding='utf-8') as f:
+                    out[n] = f.read()
+            except Exception:
+                pass
+    return json.dumps({'err': err, 'files': out})
+
+def _lab_check(tests_json, printed):
+    lines = [l.rstrip() for l in printed.strip().split('\n')] if printed.strip() else []
+    def file(n):
+        try:
+            with open(_W + '/' + n, encoding='utf-8') as f:
+                return f.read()
+        except Exception:
+            return None
+    def flines(n):
+        t = file(n)
+        return None if t is None else [l.rstrip() for l in t.strip().split('\n')]
+    res = []
+    for expr in json.loads(tests_json):
+        try:
+            ok = bool(eval(expr, {'lines': lines, 'printed': printed, 'file': file, 'flines': flines}))
+        except Exception:
+            ok = False
+        res.append(ok)
+    return json.dumps(res)
+`;
+let pyPromise = null, pyReady = false, pyBusy = Promise.resolve();
+const pystat = $('pystat');
+function loadPy(){
+  if (!pyPromise){
+    pystat.textContent = 'Python: loading...';
+    pyPromise = new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js';
+      s.onload = () => loadPyodide().then(py => { py.runPython(PY_HELPERS); pyReady = true; pystat.textContent = 'Python: ready'; res(py); }, rej);
+      s.onerror = rej;
+      document.head.appendChild(s);
+    });
+    pyPromise.catch(() => { pyPromise = null; pystat.textContent = 'Python: could not load (check internet)'; });
+  }
+  return pyPromise;
+}
+/* run a set of files; returns { text, err, files } */
+function runFiles(files, entry){
+  const job = pyBusy.then(async () => {
+    let py;
+    try { py = await loadPy(); } catch (e) { return { text: '', err: 'Python could not start. Check your internet connection and reload the page.', files: null }; }
+    const out = [];
+    py.setStdout({ batched: s => out.push(s) });
+    py.setStderr({ batched: s => out.push(s) });
+    let res;
+    try {
+      const fn = py.globals.get('_lab_run');
+      res = JSON.parse(fn(JSON.stringify(files), entry));
+      fn.destroy();
+    } catch (e) { res = { err: String(e.message || e).trim().split('\n').pop(), files: null }; }
+    return { text: out.join('\n'), err: res.err, files: res.files, py };
+  });
+  pyBusy = job.catch(() => {});
+  return job;
+}
+
+/* ---------- Lab ----------
+   cfg.files  [[name, text], ...]   .py files get editor tabs, everything else goes in the Files box
+   cfg.open   data file to show first      cfg.view  'table' to open CSV files as a table
+   cfg.nl     offer "Show hidden characters"
+   cfg.extras [[label, fn(lab, button)]]   cfg.notes / cfg.side  extra HTML under the code / under the output
+   cfg.counter  show how many times Run was pressed */
+const IDLE = '<span class="muted">Press Run to see what happens</span>';
+function makeLab(root, cfg){
+  const lab = { cfg, view: {}, showNl: false, runs: 0 };
+  root.innerHTML = `<div class="lab"><div class="main"><div class="pytabs"></div><div class="ed"></div><div class="controls"><button class="btn primary run">Run</button><button class="btn rst">Reset</button></div><div class="notes"></div></div>
+    <div class="side"><div class="fbox"><div class="label">Files</div><div class="chips"></div><div class="paper"><div class="phead"><span class="pinfo"></span><span class="seg"></span></div><div class="pbody"></div></div></div><div class="label">Output</div><pre class="out">${IDLE}</pre>${cfg.counter ? '<p class="runs"></p>' : ''}<div class="sidenotes"></div></div></div>`;
+  const q = s => root.querySelector(s);
+  const el = { lab: q('.lab'), tabs: q('.pytabs'), chips: q('.chips'), fbox: q('.fbox'), body: q('.pbody'), info: q('.pinfo'), seg: q('.seg'), out: q('.out'), runBtn: q('.run'), ctl: q('.controls') };
+  lab.out = el.out; lab.root = root;
+  if (cfg.compact) el.lab.classList.add('compact');
+  q('.notes').innerHTML = cfg.notes || ''; q('.sidenotes').innerHTML = cfg.side || '';
+  lab.cm = CodeMirror(q('.ed'), {
+    value: '', mode: 'python', lineNumbers: true, indentUnit: 4, tabSize: 4, viewportMargin: Infinity, lineWrapping: true,
+    extraKeys: {
+      Tab: cm => cm.somethingSelected() ? cm.indentSelection('add') : cm.replaceSelection('    ', 'end'),
+      'Shift-Tab': cm => cm.indentSelection('subtract'),
+      'Ctrl-Enter': () => lab.run(), 'Cmd-Enter': () => lab.run()
+    }
+  });
+  const isPy = n => n.endsWith('.py');
+
+  /* load a fresh set of files (also used by Reset) */
+  lab.load = files => {
+    lab.orig = files;
+    lab.py = files.filter(f => isPy(f[0])).map(([name, text]) => ({ name, doc: CodeMirror.Doc(text, 'python') }));
+    lab.data = files.filter(f => !isPy(f[0])).map(([name, text]) => ({ name, text }));
+    lab.entry = lab.py[0].name;
+    lab.shown = cfg.open && lab.data.some(d => d.name === cfg.open) ? cfg.open : (lab.data[0] ? lab.data[0].name : null);
+    el.lab.classList.toggle('onepy', lab.py.length === 1);
+    el.lab.classList.toggle('solo', !lab.data.length && !cfg.keepFiles);
+    el.fbox.style.display = (lab.data.length || cfg.keepFiles) && !cfg.hideFiles ? '' : 'none';
+    el.out.innerHTML = IDLE;
+    lab.openPy(lab.entry);
+    lab.drawFiles();
+  };
+  lab.openPy = name => {
+    lab.entry = name;
+    lab.cm.swapDoc(lab.py.find(p => p.name === name).doc);
+    el.tabs.innerHTML = '';
+    lab.py.forEach((p, i) => {
+      const b = document.createElement('button');
+      b.className = 'pytab' + (i ? ' mod' : '') + (p.name === name ? ' on' : '');
+      b.textContent = p.name; b.onclick = () => lab.openPy(p.name);
+      el.tabs.appendChild(b);
+    });
+    el.runBtn.textContent = lab.py.length > 1 ? 'Run ' + name : 'Run';
+    setTimeout(() => lab.cm.refresh(), 0);
+  };
+  lab.setCode = (code, name) => { lab.py.find(p => p.name === (name || lab.entry)).doc.setValue(code); };
+  lab.code = name => lab.py.find(p => p.name === (name || lab.entry)).doc.getValue();
+
+  /* the Files box */
+  lab.drawFiles = (changed = {}) => {
+    el.chips.innerHTML = '';
+    lab.data.forEach(d => {
+      const b = document.createElement('button');
+      b.className = 'chip' + (d.name === lab.shown ? ' on' : '') + (changed[d.name] ? ' flash' : '');
+      b.innerHTML = esc(d.name) + (changed[d.name] ? `<span class="tag">${changed[d.name]}</span>` : '');
+      b.onclick = () => { lab.shown = d.name; lab.drawFiles(); };
+      el.chips.appendChild(b);
+    });
+    const d = lab.data.find(x => x.name === lab.shown);
+    el.seg.innerHTML = '';
+    if (!d){ el.info.textContent = 'no files yet'; el.body.innerHTML = '<span class="empty">A file will show up here when the program makes it</span>'; el.body.className = 'pbody wrap'; return; }
+    const lines = d.text ? d.text.replace(/\r/g, '').replace(/\n$/, '').split('\n') : [];
+    const csv = /\.csv$/.test(d.name);
+    const mode = csv ? (lab.view[d.name] || cfg.view || 'text') : 'text';
+    el.info.textContent = !d.text ? 'empty' : csv ? `${lines.length - 1} rows and a line of column names` : lines.length === 1 ? '1 line' : `${lines.length} lines`;
+    const seg = (label, on, fn) => { const b = document.createElement('button'); b.textContent = label; b.className = on ? 'on' : ''; b.onclick = fn; el.seg.appendChild(b); };
+    if (csv){
+      seg('Text', mode === 'text', () => { lab.view[d.name] = 'text'; lab.drawFiles(); });
+      seg('Table', mode === 'table', () => { lab.view[d.name] = 'table'; lab.drawFiles(); });
+    } else if (cfg.nl){
+      seg(lab.showNl ? 'Hide hidden characters' : 'Show hidden characters', lab.showNl, () => { lab.showNl = !lab.showNl; lab.drawFiles(); });
+    }
+    const top = el.body.scrollTop;
+    el.body.className = 'pbody';
+    if (!d.text) el.body.innerHTML = '<span class="empty">(this file is empty)</span>';
+    else if (mode === 'table'){
+      const rows = parseCSV(d.text);
+      el.body.innerHTML = '<table><tr>' + rows[0].map(c => `<th>${esc(c)}</th>`).join('') + '</tr>' + rows.slice(1).map(r => '<tr>' + r.map(c => `<td>${esc(c)}</td>`).join('') + '</tr>').join('') + '</table>';
+    } else {
+      const was = changed[d.name] === 'changed' && d.prev != null ? d.prev.replace(/\n$/, '').split('\n').length : (changed[d.name] ? 0 : 1e9);
+      const endNl = d.text.endsWith('\n');
+      el.body.innerHTML = lines.map((l, i) => `<div${i >= was ? ' class="lineflash"' : ''}>${esc(l) || (lab.showNl ? '' : ' ')}${lab.showNl && (i < lines.length - 1 || endNl) ? '<span class="nl">\\n</span>' : ''}</div>`).join('');
+    }
+    el.body.scrollTop = changed[d.name] ? el.body.scrollHeight : top;
+  };
+
+  lab.run = async () => {
+    el.out.innerHTML = pyReady ? '<span class="muted">Running...</span>' : '<span class="muted">Starting Python. The first run can take a few seconds...</span>';
+    const files = {};
+    lab.py.forEach(p => { files[p.name] = p.doc.getValue(); });
+    lab.data.forEach(d => { files[d.name] = d.text; });
+    const r = await runFiles(files, lab.entry);
+    let h = esc(r.text);
+    if (r.err) h += (h ? '\n' : '') + `<span class="err">${esc(r.err)}</span>`;
+    el.out.innerHTML = h || '<span class="muted">(nothing was printed)</span>';
+    el.out.scrollTop = 0;
+    const changed = {};
+    if (r.files){
+      for (const [name, text] of Object.entries(r.files)){
+        if (isPy(name)) continue;
+        const d = lab.data.find(x => x.name === name);
+        if (!d){ lab.data.push({ name, text }); changed[name] = 'new'; }
+        else if (d.text !== text){ d.prev = d.text; d.text = text; changed[name] = 'changed'; }
+      }
+      const first = Object.keys(changed)[0];
+      if (first) lab.shown = first;
+      el.fbox.style.display = (lab.data.length || cfg.keepFiles) && !cfg.hideFiles ? '' : 'none';
+      lab.drawFiles(changed);
+    }
+    lab.runs++;
+    const rc = root.querySelector('.runs');
+    if (rc) rc.textContent = `You have pressed Run ${lab.runs} time${lab.runs === 1 ? '' : 's'}`;
+    if (lab.onDone) await lab.onDone(r);
+    return r;
+  };
+  lab.reset = () => { lab.runs = 0; const rc = root.querySelector('.runs'); if (rc) rc.textContent = ''; lab.showNl = false; lab.view = {}; lab.load(lab.orig); if (lab.onReset) lab.onReset(); };
+  el.runBtn.onclick = () => lab.run();
+  q('.rst').onclick = () => lab.reset();
+  (cfg.extras || []).forEach(([label, fn]) => {
+    const b = document.createElement('button'); b.className = 'btn'; b.textContent = label;
+    b.onclick = () => fn(lab, b); el.ctl.appendChild(b);
+  });
+  lab.load(cfg.files);
+  return lab;
+}
+/* a file box by itself, with no code (used on the CSV slide) */
+function fileOnly(root, name, text, view){
+  const host = document.createElement('div');
+  root.appendChild(host);
+  const lab = makeLab(host, { files: [['main.py', ''], [name, text]], view });
+  const box = host.querySelector('.fbox');
+  box.querySelector('.label').remove();
+  box.style.margin = '0';
+  root.appendChild(box); host.remove();
+}
+
+/* ---------- Stepper ----------
+   cfg.codes  [[file name, code], ...]   one or two code files
+   cfg.steps  each step: { f, line, note, out, vars, file }
+     f     which code file the yellow line is in (0 by default)
+     vars  [[name, value], ...] replaces the variable list. A value is Python text, { file: name } or { dict: [[k, v], ...] }
+     file  { name: { text, cur, st } } changes a file in the picture. cur is the line being read, st is 'reading', 'writing' or 'closed'
+   Everything carries over to the next step until a step changes it. */
+function makeStepper(root, cfg){
+  const many = cfg.codes.length > 1;
+  root.innerHTML = `<div class="stepper"><div>${cfg.codes.map(([n, c], k) => `${many ? `<div class="sname${k ? ' mod' : ''}">${esc(n)}</div>` : ''}<div class="scode" data-k="${k}">${c.split('\n').map((l, i) => `<div class="ln"><span class="num">${i + 1}</span><span class="arr"></span><span class="txt">${hl(l) || ' '}</span></div>`).join('')}</div>`).join('')}
+    <div class="controls"><button class="btn" data-a="back">&#9664; Back</button><button class="btn primary" data-a="next">Next step &#9654;</button><button class="btn" data-a="reset">Start over</button><span class="muted cnt"></span></div><p class="note"></p></div>
+    <div><div class="sfiles"></div><div class="label">Variables</div><div class="svars"></div><div class="label">Output</div><pre class="out"></pre></div></div>`;
+  const q = s => root.querySelector(s);
+  const init = { f: 0, line: 0, note: 'Press <b>Next step</b> to run the code one line at a time', outs: [], vars: [], files: cfg.files || {} };
+  const states = [];
+  let prev = init;
+  cfg.steps.forEach(s => {
+    const st = { f: s.f || 0, line: s.line, note: s.note, outs: s.out !== undefined ? prev.outs.concat(s.out.split('\n')) : prev.outs, vars: s.vars || prev.vars, files: { ...prev.files }, fresh: {}, newLine: {} };
+    for (const [n, ch] of Object.entries(s.file || {})){
+      const old = prev.files[n] || {};
+      st.files[n] = { ...old, ...ch };
+      if (ch.text !== undefined && old.text !== undefined && ch.text.length > old.text.length) st.newLine[n] = old.text ? old.text.replace(/\n$/, '').split('\n').length : 0;
+    }
+    const before = Object.fromEntries(prev.vars.map(([n, v]) => [n, JSON.stringify(v)]));
+    st.vars.forEach(([n, v]) => { if (before[n] !== JSON.stringify(v)) st.fresh[n] = true; });
+    states.push(st); prev = st;
+  });
+  const ST = { reading: 'open for reading', writing: 'open for writing', closed: 'closed' };
+  const val = (v, fresh) => {
+    if (v && v.dict) return `<div class="dict"><div class="dh">dictionary</div>${v.dict.map(([k, x], i) => `<div class="dr c${i % 4}"><span><span class="kv">"${esc(k)}"</span></span><span>"${esc(x)}"</span></div>`).join('')}</div>`;
+    if (v && v.file) return `<span class="vv fileref${fresh ? ' fresh' : ''}">${esc(v.file)}</span>`;
+    return `<span class="vv${fresh ? ' fresh' : ''}">${hl(v)}</span>`;
+  };
+  let i = -1;
+  function render(){
+    const st = i < 0 ? init : states[i];
+    root.querySelectorAll('.scode').forEach(c => [...c.children].forEach((el, k) => el.classList.toggle('cur', i >= 0 && +c.dataset.k === st.f && st.line === k + 1)));
+    q('.sfiles').innerHTML = Object.entries(st.files).map(([n, f]) => {
+      const lines = f.text ? f.text.replace(/\n$/, '').split('\n') : [];
+      const from = st.newLine && st.newLine[n] !== undefined ? st.newLine[n] : 1e9;
+      return `<div class="paper"><div class="phead"><span>${esc(n)}</span>${f.st ? `<span class="st${f.st === 'closed' ? '' : ' open'}">${ST[f.st]}</span>` : ''}</div><div class="pbody">${lines.length ? lines.map((l, k) => `<div class="rl${f.cur === k ? ' cur' : ''}${k >= from ? ' new' : ''}">${esc(l) || ' '}</div>`).join('') : '<div class="rl"><span class="empty">(empty)</span></div>'}</div></div>`;
+    }).join('');
+    q('.svars').innerHTML = st.vars.length ? st.vars.map(([n, v]) => `<span class="vn">${esc(n)}</span>${val(v, st.fresh && st.fresh[n])}`).join('') : '<span class="none">(none yet)</span>';
+    q('.out').innerHTML = st.outs.length ? st.outs.map(esc).join('\n') : '<span class="muted">(nothing printed yet)</span>';
+    q('.note').innerHTML = st.note || '';
+    q('[data-a=back]').disabled = i < 0;
+    q('[data-a=next]').disabled = i >= states.length - 1;
+    q('.cnt').textContent = i < 0 ? '' : `Step ${i + 1} of ${states.length}`;
+  }
+  q('[data-a=next]').onclick = () => { if (i < states.length - 1){ i++; render(); } };
+  q('[data-a=back]').onclick = () => { if (i >= 0){ i--; render(); } };
+  q('[data-a=reset]').onclick = () => { i = -1; render(); };
+  render();
+}
+
+const TX = {
+ "s11.after1": "After <code>import math</code>, we get to the things inside the module by writing <code>math</code>, a dot, and the name of what we want. <code>math.sqrt(144)</code> is the square root of 144, and <code>math.pi</code> is the number pi. This is the same dot we use to call a method on an object, like <code>rex.bark()</code>.",
+ "s11.after2": "<code>random.randint(1, 6)</code> gives a random whole number from 1 to 6, and <code>random.choice()</code> picks a random item from a list. Run the program a few times and the last two lines will change.",
+ "s12.note1": "<code>import csv</code> loads the module",
+ "s12.note2": "The file is opened the same way as any other file",
+ "s12.note3": "<code>csv.DictReader(f)</code> starts by reading the first line of the file, which has the column names. It keeps those names to use as keys.",
+ "s12.note4": "Then it reads the next line and gives it to the loop as a dictionary called <code>row</code>. Each column name is a key, and the value is what this line has in that column.",
+ "s12.note5": "To get a value out of <code>row</code>, we use the column name as the key. <code>row[\"name\"]</code> is <code>\"100 Grand\"</code>.",
+ "s12.note6": "The loop goes around again. <code>row</code> is now a dictionary for the next line of the file.",
+ "s12.note7": "The keys are the same as before. Only the values are different.",
+ "s12.note8": "Every value has quotes around it, even the win percent. Values from a file are always strings.",
+ "s12.note9": "The loop keeps going until it has gone through all 83 candies",
+ "s17.note1": "Python gets to <code>import tools</code>, so it looks for a file called <code>tools.py</code> in the same folder",
+ "s17.note2": "It runs <code>tools.py</code> starting at the top. A <code>def</code> line only tells Python that the function exists. The code inside it doesn't run yet.",
+ "s17.note3": "This line isn't inside a function, so Python runs it. We wrote it to check that <code>percent</code> works.",
+ "s17.note4": "It calls <code>percent(1, 4)</code>. 1 divided by 4 is 0.25, and 0.25 times 100 is 25.0.",
+ "s17.note5": "The test prints. We only imported the module, but its test showed up in our output.",
+ "s17.note6": "That was the last line of <code>tools.py</code>, so Python goes back to <code>main.py</code>",
+ "s17.note7": "<code>tools.percent(37, 83)</code> calls the function in the module. 37 of the 83 candies are chocolate, so this tells us what percent are chocolate.",
+ "s17.note8": "This is the only line we wanted to print. The line above it came from the test in <code>tools.py</code>.",
+ "s2.after1": "It prints 1 every time. When a program ends, Python throws away all of its variables, so the next run starts over at <code>runs = 0</code>.",
+ "s2.after2": "For a program to remember something, it has to save it in a <b>file</b>. A file stays on the computer after the program ends, which is how a game still has your progress the next day.",
+ "s20.why1": "<code>FileNotFoundError</code> means there is no file with that name. The file is called <code>groceries.txt</code>, and the program asked for <code>grocery.txt</code>. The name has to match exactly, including capital letters and the ending.",
+ "s20.why2": "<code>line</code> is a string and <code>best</code> is a number, and Python can't tell which is bigger. The fix turns the line into a number with <code>int()</code> first and uses that number from then on.",
+ "s20.why3": "There was no error, but look at the file. Opening it with <code>\"w\"</code> erased the four items that were in it. To add to a file and keep what's there, open it with <code>\"a\"</code>.",
+ "s20.why4": "We imported <code>statistics</code>, but <code>mean</code> is inside that module. Python only finds it if we write <code>statistics.mean</code>.",
+ "s20.why5": "The file is only open for the lines indented under <code>with</code>. The loop isn't indented, so the file is already closed when the loop tries to read it. The fix indents the loop.",
+ "s20.why6": "When Python sees <code>import csv</code>, it looks in our own folder first. It found the file we named <code>csv.py</code> and imported that, and our file has no <code>DictReader</code>. The fix renames our file to <code>notes.py</code>. Don't give a file the same name as a module you want to use.",
+ "s21.r1": "loads a module so we can use what's inside it",
+ "s21.r2": "looks for <code>candy_tools.py</code> in the same folder",
+ "s21.r3": "opens the file for reading, and <code>with</code> closes it afterward",
+ "s21.r4": "gets each row as a dictionary with column names for keys",
+ "s21.r5": "turns the string from the file into a number",
+ "s21.r6": "opens the file for writing and erases what's already in it",
+ "s21.r7": "writes a string to the file, with <code>\\n</code> to start a new line",
+ "s21.r8": "calls <code>load</code> from the <code>candy_tools</code> module",
+ "s22.desc1": "<code>prices.txt</code> has a price on each line. Read the file, add the prices, and print the total.",
+ "s22.desc2": "Write each name in the list to <code>guests.txt</code>, with each name on its own line.",
+ "s22.desc3": "Use <code>csv.DictReader</code> to count the candies in <code>candy.csv</code> whose <code>chocolate</code> value is <code>\"yes\"</code>. Print the count.",
+ "s22.desc4": "<code>main.py</code> calls <code>shapes.area</code> and <code>shapes.perimeter</code> with the width and height of a rectangle, but <code>shapes.py</code> is empty. In the <code>shapes.py</code> tab, write those two functions so they return the rectangle's area and perimeter. Then go back to <code>main.py</code> and run it.",
+ "s22.hint1": "Start with <code>total = 0</code>. Loop over the file's lines and add <code>int(line)</code> to <code>total</code> each time. Print <code>total</code> after the loop.",
+ "s22.hint2": "Open <code>guests.txt</code> with <code>\"w\"</code>. Inside the indented lines under <code>with</code>, loop over the list and call <code>f.write(name + \"\\n\")</code>.",
+ "s22.hint3": "Start with <code>count = 0</code>. Inside the loop over the rows, add 1 to <code>count</code> when <code>row[\"chocolate\"] == \"yes\"</code>.",
+ "s22.hint4": "In <code>shapes.py</code>, define <code>area(width, height)</code> and return the width times the height. For the perimeter, return 2 times the width plus 2 times the height. Both functions need to return their answers.",
+ "s3.note1": "This line opens the file. <code>open</code> takes the name of the file, and <code>as f</code> puts the open file in a variable called <code>f</code>. The lines indented under <code>with</code> are where we can use it.",
+ "s3.note2": "<code>f.read()</code> gives us everything in the file as one string, and we save it in <code>text</code>. Look at <code>text</code> on the right. Every place where the file starts a new line shows up in the string as <code>\\n</code>.",
+ "s3.note3": "There are no more indented lines, so Python closes the file. Closing the file for us is the reason we use <code>with</code>. We can still use <code>text</code>, because the words were copied into it.",
+ "s3.note4": "<code>print</code> shows the string. Each <code>\\n</code> starts a new line, so the output looks the same as the file.",
+ "s4.get1": "The loop takes the first line of the file and puts it in <code>line</code>. Notice the <code>\\n</code> at the end of it.",
+ "s4.get2": "The loop goes around again, and <code>line</code> becomes the second line",
+ "s4.get3": "Now <code>line</code> is the third line",
+ "s4.get4": "This is the last line of the file",
+ "s4.note1": "The file is opened the same way as on the last slide",
+ "s4.note2": "Every line we read from the file still has its <code>\\n</code> at the end, and <code>\\n</code> means \"go to the next line\". When <code>print</code> finishes, it goes to the next line again. That leaves an empty line after each word.",
+ "s4.print1": "<code>print</code> shows milk, but there is an empty line under it in the output",
+ "s4.print2": "The same thing happens with eggs",
+ "s4.print3": "And again with bread",
+ "s4.print4": "Every item has an empty line after it",
+ "s6.add1": "<code>score</code> is a number, so we can add it to <code>total</code>",
+ "s6.add2": "A + B is C, so <code>total</code> is now C",
+ "s6.get1": "The loop takes the first line. Look at the quotes around it on the right. It's the string <code>\"88\\n\"</code>, and we can't do math with a string.",
+ "s6.get2": "The second line is a string too",
+ "s6.get3": "This is the last line of the file",
+ "s6.int1": "<code>int()</code> turns the string into the number 88. It ignores the <code>\\n</code>, so we don't need <code>strip()</code> this time.",
+ "s6.int2": "<code>int()</code> turns it into the number N",
+ "s6.note1": "<code>total</code> starts at 0. We'll add each score to it.",
+ "s6.note2": "The file is opened for reading",
+ "s6.note3": "The file has no more lines, so the loop ends and the file is closed. Then we print the total.",
+ "s7.note1": "The <code>\"w\"</code> opens the file for writing. There is no file called <code>todo.txt</code> yet, so Python makes an empty file with that name.",
+ "s7.note2": "<code>f.write()</code> puts the string into the file. Unlike <code>print</code>, it doesn't start a new line afterward, so we put <code>\\n</code> at the end of the string ourselves.",
+ "s7.note3": "The second <code>write</code> continues from where the first stopped. It's on its own line because the first string ended with <code>\\n</code>.",
+ "s7.note4": "The indented lines are done, so Python closes the file. <code>todo.txt</code> will still be on the computer after the program ends.",
+ "s8.r1": "Opens the file for reading. The file has to exist already.",
+ "s8.r2": "Opens the file for writing and erases anything that was already in it",
+ "s8.r3": "Opens the file to add text at the end, and keeps what is already there"
+};
+
+/* ---------- Slide 1 ---------- */
+(() => {
+  $('s1file').textContent = CANDY.split('\n').slice(0, 7).join('\n') + '\n...';
+  $('s1code').innerHTML = hl('import csv\n\nwith open("candy.csv") as f:\n    for row in csv.DictReader(f):\n        if int(row["win_percent"]) > 75:\n            print(row["name"], row["win_percent"])');
+  $('s1out').textContent = parseCSV(CANDY).slice(1).filter(r => +r[3] > 75).map(r => r[0] + ' ' + r[3]).join('\n');
+  window.titleGrow = () => {};
+})();
+
+/* ---------- Slide 2: programs forget ---------- */
+makeLab($('s2lab'), {
+  counter: true,
+  files: [['main.py', 'runs = 0\nruns = runs + 1\n\nprint("This program has been run", runs, "time(s)")']],
+  side: '<p>' + TX['s2.after1'] + '</p><p>' + TX['s2.after2'] + '</p>'
+});
+
+/* ---------- Slide 3: reading a file ---------- */
+makeStepper($('s3step'), {
+  codes: [['main.py', 'with open("groceries.txt") as f:\n    text = f.read()\n\nprint(text)']],
+  files: { 'groceries.txt': { text: GROCERIES, st: 'closed' } },
+  steps: [
+    { line: 1, file: { 'groceries.txt': { st: 'reading' } }, vars: [['f', { file: 'the open file groceries.txt' }]],
+      note: TX['s3.note1'] },
+    { line: 2, vars: [['f', { file: 'the open file groceries.txt' }], ['text', '"milk\\neggs\\nbread\\napples\\n"']],
+      note: TX['s3.note2'] },
+    { line: 4, file: { 'groceries.txt': { st: 'closed' } }, vars: [['text', '"milk\\neggs\\nbread\\napples\\n"']],
+      note: TX['s3.note3'] },
+    { line: 4, out: 'milk\neggs\nbread\napples',
+      note: TX['s3.note4'] }
+  ]
+});
+
+/* ---------- Slide 4: line by line ---------- */
+(() => {
+  const items = ['milk', 'eggs', 'bread', 'apples'];
+  const F = { file: 'the open file groceries.txt' };
+  const steps = [{ line: 1, file: { 'groceries.txt': { st: 'reading' } }, vars: [['f', F]], note: TX['s4.note1'] }];
+  const getNote = [1, 2, 3, 4].map(k => TX['s4.get' + k]);
+  const printNote = [1, 2, 3, 4].map(k => TX['s4.print' + k]);
+  items.forEach((it, k) => {
+    steps.push({ line: 2, file: { 'groceries.txt': { cur: k } }, vars: [['f', F], ['line', `"${it}\\n"`]], note: getNote[k] });
+    steps.push({ line: 3, out: it + '\n', note: printNote[k] });
+  });
+  steps.push({ line: 3, file: { 'groceries.txt': { cur: null, st: 'closed' } }, vars: [['line', '"apples\\n"']],
+    note: TX['s4.note2'] });
+  makeStepper($('s4step'), { codes: [['main.py', 'with open("groceries.txt") as f:\n    for line in f:\n        print(line)']], files: { 'groceries.txt': { text: GROCERIES, st: 'closed' } }, steps });
+})();
+
+/* ---------- Slide 5: strip ---------- */
+makeLab($('s5lab'), {
+  hideFiles: true,
+  files: [['main.py', 'with open("groceries.txt") as f:\n    for line in f:\n        print(line)'], ['groceries.txt', GROCERIES]],
+  extras: [['Fix it', lab => { lab.setCode('with open("groceries.txt") as f:\n    for line in f:\n        line = line.strip()\n        print(line)'); lab.run(); }]]
+});
+
+/* ---------- Slide 6: numbers in a file ---------- */
+(() => {
+  const nums = [88, 92, 79];
+  const F = { file: 'the open file scores.txt' };
+  const steps = [
+    { line: 1, vars: [['total', '0']], note: TX['s6.note1'] },
+    { line: 3, file: { 'scores.txt': { st: 'reading' } }, vars: [['total', '0'], ['f', F]], note: TX['s6.note2'] }
+  ];
+  let total = 0;
+  nums.forEach((n, k) => {
+    const before = total; total += n;
+    steps.push({ line: 4, file: { 'scores.txt': { cur: k } }, vars: [['total', String(before)], ['f', F], ['line', `"${n}\\n"`]].concat(k ? [['score', String(nums[k - 1])]] : []),
+      note: TX['s6.get' + (k + 1)] });
+    steps.push({ line: 5, vars: [['total', String(before)], ['f', F], ['line', `"${n}\\n"`], ['score', String(n)]],
+      note: k === 0 ? TX['s6.int1'] : TX['s6.int2'].replace('N', n) });
+    steps.push({ line: 6, vars: [['total', String(total)], ['f', F], ['line', `"${n}\\n"`], ['score', String(n)]],
+      note: k === 0 ? TX['s6.add1'] : TX['s6.add2'].replace('A', before).replace('B', n).replace('C', total) });
+  });
+  steps.push({ line: 8, file: { 'scores.txt': { cur: null, st: 'closed' } }, vars: [['total', String(total)]], out: String(total),
+    note: TX['s6.note3'] });
+  makeStepper($('s6step'), { codes: [['main.py', 'total = 0\n\nwith open("scores.txt") as f:\n    for line in f:\n        score = int(line)\n        total = total + score\n\nprint(total)']], files: { 'scores.txt': { text: '88\n92\n79\n', st: 'closed' } }, steps });
+})();
+
+/* ---------- Slide 7: writing ---------- */
+makeStepper($('s7step'), {
+  codes: [['main.py', 'with open("todo.txt", "w") as f:\n    f.write("study for the exam\\n")\n    f.write("call mom\\n")\n\nprint("Saved")']],
+  steps: [
+    { line: 1, file: { 'todo.txt': { text: '', st: 'writing' } }, vars: [['f', { file: 'the open file todo.txt' }]],
+      note: TX['s7.note1'] },
+    { line: 2, file: { 'todo.txt': { text: 'study for the exam\n' } },
+      note: TX['s7.note2'] },
+    { line: 3, file: { 'todo.txt': { text: 'study for the exam\ncall mom\n' } },
+      note: TX['s7.note3'] },
+    { line: 5, file: { 'todo.txt': { st: 'closed' } }, vars: [], out: 'Saved',
+      note: TX['s7.note4'] }
+  ]
+});
+
+/* ---------- Slide 8: w and a ---------- */
+makeLab($('s8lab'), {
+  keepFiles: true, counter: true,
+  files: [['main.py', 'with open("log.txt", "w") as f:\n    f.write("the program ran\\n")']],
+  extras: [['Change "w" to "a"', lab => { lab.setCode(lab.code().replace('"w"', '"a"')); }]],
+  notes: `<table class="modes">
+<tr><td><code>open(name)</code></td><td>${TX['s8.r1']}</td></tr>
+<tr><td><code>open(name, "w")</code></td><td>${TX['s8.r2']}</td></tr>
+<tr><td><code>open(name, "a")</code></td><td>${TX['s8.r3']}</td></tr>
+</table>`
+});
+
+/* ---------- Slide 9: a program that remembers ---------- */
+makeLab($('s9lab'), {
+  counter: true,
+  files: [['main.py', 'with open("count.txt") as f:\n    runs = int(f.read())\n\nruns = runs + 1\nprint("This program has been run", runs, "time(s)")\n\nwith open("count.txt", "w") as f:\n    f.write(str(runs))'], ['count.txt', '0']]
+});
+
+/* ---------- Slide 10: CSV ---------- */
+fileOnly($('s10file'), 'candy.csv', CANDY, 'text');
+
+/* ---------- Slide 11: modules ---------- */
+makeLab($('s11lab'), {
+  files: [['main.py', 'import math\nimport random\n\nprint(math.sqrt(144))\nprint(math.pi)\n\nprint(random.randint(1, 6))\nprint(random.choice(["rock", "paper", "scissors"]))']],
+  side: '<p>' + TX['s11.after1'] + '</p><p>' + TX['s11.after2'] + '</p>'
+});
+
+/* ---------- Slide 12: csv.DictReader ---------- */
+(() => {
+  const all = parseCSV(CANDY), head = all[0];
+  const text = CANDY.split('\n').slice(0, 4).join('\n') + '\n...';
+  const F = { file: 'the open file candy.csv' };
+  const D = k => ({ dict: head.map((h, i) => [h, all[k][i]]) });
+  const steps = [
+    { line: 1, note: TX['s12.note1'] },
+    { line: 3, file: { 'candy.csv': { st: 'reading' } }, note: TX['s12.note2'] },
+    { line: 4, file: { 'candy.csv': { cur: 0 } }, note: TX['s12.note3'] },
+    { line: 4, file: { 'candy.csv': { cur: 1 } }, vars: [['row', D(1)]], note: TX['s12.note4'] },
+    { line: 5, out: '100 Grand 67', note: TX['s12.note5'] },
+    { line: 4, file: { 'candy.csv': { cur: 2 } }, vars: [['row', D(2)]], note: TX['s12.note6'] },
+    { line: 5, out: '3 Musketeers 68', note: TX['s12.note7'] },
+    { line: 4, file: { 'candy.csv': { cur: 3 } }, vars: [['row', D(3)]], note: TX['s12.note8'] },
+    { line: 5, out: 'Air Heads 52', note: TX['s12.note9'] }
+  ];
+  makeStepper($('s12step'), { codes: [['main.py', 'import csv\n\nwith open("candy.csv") as f:\n    for row in csv.DictReader(f):\n        print(row["name"], row["win_percent"])']], files: { 'candy.csv': { text, st: 'closed' } }, steps });
+})();
+
+/* ---------- Slide 13: asking a question ---------- */
+makeLab($('s13lab'), {
+  open: 'candy.csv', view: 'table', compact: true,
+  files: [['main.py', 'import csv\n\nwith open("candy.csv") as f:\n    for row in csv.DictReader(f):\n        win = int(row["win_percent"])\n        if win > 75:\n            print(row["name"], win)'], ['candy.csv', CANDY]]
+});
+
+/* ---------- Slide 14: statistics ---------- */
+makeLab($('s14lab'), {
+  open: 'candy.csv', view: 'table', compact: true,
+  files: [['main.py', 'import csv\nimport statistics\n\nwins = []\nwith open("candy.csv") as f:\n    for row in csv.DictReader(f):\n        wins.append(int(row["win_percent"]))\n\nprint("Candies:", len(wins))\nprint("Average:", statistics.mean(wins))\nprint("Middle:", statistics.median(wins))'], ['candy.csv', CANDY]]
+});
+
+/* ---------- Slide 15: chocolate or fruity ---------- */
+makeLab($('s15lab'), {
+  open: 'candy.csv', view: 'table', compact: true,
+  files: [['main.py', 'import csv\nimport statistics\n\nchocolate = []\nfruity = []\n\nwith open("candy.csv") as f:\n    for row in csv.DictReader(f):\n        win = int(row["win_percent"])\n        if row["chocolate"] == "yes":\n            chocolate.append(win)\n        if row["fruity"] == "yes":\n            fruity.append(win)\n\nprint("Chocolate:", statistics.mean(chocolate))\nprint("Fruity:", statistics.mean(fruity))'], ['candy.csv', CANDY]]
+});
+
+/* ---------- Slide 16: your own module ---------- */
+makeLab($('s16lab'), {
+  hideFiles: true,
+  files: [
+    ['main.py', 'import candy_tools\n\ncandies = candy_tools.load("candy.csv")\n\nprint("Loaded", len(candies), "candies")\nprint("Average:", candy_tools.average(candies, "win_percent"))'],
+    ['candy_tools.py', 'import csv\n\ndef load(filename):\n    rows = []\n    with open(filename) as f:\n        for row in csv.DictReader(f):\n            rows.append(row)\n    return rows\n\ndef average(rows, column):\n    total = 0\n    for row in rows:\n        total = total + int(row[column])\n    return total / len(rows)'],
+    ['candy.csv', CANDY]]
+});
+
+/* ---------- Slide 17: what import does ---------- */
+makeStepper($('s17step'), {
+  codes: [['main.py', 'import tools\n\nprint(tools.percent(37, 83))'], ['tools.py', 'def percent(part, whole):\n    return part / whole * 100\n\nprint("Testing:", percent(1, 4))']],
+  steps: [
+    { f: 0, line: 1, note: TX['s17.note1'] },
+    { f: 1, line: 1, note: TX['s17.note2'] },
+    { f: 1, line: 4, note: TX['s17.note3'] },
+    { f: 1, line: 2, vars: [['part', '1'], ['whole', '4']], note: TX['s17.note4'] },
+    { f: 1, line: 4, vars: [], out: 'Testing: 25.0', note: TX['s17.note5'] },
+    { f: 0, line: 3, note: TX['s17.note6'] },
+    { f: 1, line: 2, vars: [['part', '37'], ['whole', '83']], note: TX['s17.note7'] },
+    { f: 0, line: 3, vars: [], out: '44.57831325301205', note: TX['s17.note8'] }
+  ]
+});
+
+/* ---------- Slide 18: __name__ ---------- */
+makeLab($('s18lab'), {
+  files: [
+    ['main.py', 'import tools\n\nprint(tools.percent(37, 83))'],
+    ['tools.py', 'def percent(part, whole):\n    return part / whole * 100\n\nif __name__ == "__main__":\n    print("Testing:", percent(1, 4))']]
+});
+
+/* ---------- Slide 19: a class in a module ---------- */
+makeLab($('s19lab'), {
+  hideFiles: true,
+  files: [
+    ['main.py', 'from candy import Candy, load_candies\n\ncandies = load_candies("candy.csv")\n\nfor c in candies:\n    if c.win > 75:\n        c.show()\n\nmine = Candy("Homemade Fudge", 99)\nmine.show()'],
+    ['candy.py', 'import csv\n\nclass Candy:\n    def __init__(self, name, win):\n        self.name = name\n        self.win = win\n\n    def show(self):\n        print(self.name, "wins", self.win, "percent of the time")\n\ndef load_candies(filename):\n    candies = []\n    with open(filename) as f:\n        for row in csv.DictReader(f):\n            c = Candy(row["name"], int(row["win_percent"]))\n            candies.append(c)\n    return candies'],
+    ['candy.csv', CANDY]]
+});
+
+
+/* ---------- Slide 20: common mistakes ---------- */
+(() => {
+  const DR = 'import csv\n\nwith open("candy.csv") as f:\n    for row in csv.DictReader(f):\n        ';
+  const M = [
+    { tab: 'Wrong file name',
+      bad: [['main.py', 'with open("grocery.txt") as f:\n    for line in f:\n        print(line.strip())'], ['groceries.txt', GROCERIES]],
+      fix: 'with open("groceries.txt") as f:\n    for line in f:\n        print(line.strip())',
+      why: TX['s20.why1'] },
+    { tab: 'Forgot int()',
+      bad: [['main.py', 'best = 0\n\nwith open("scores.txt") as f:\n    for line in f:\n        if line > best:\n            best = line\n\nprint("Best score:", best)'], ['scores.txt', SCORES]],
+      fix: 'best = 0\n\nwith open("scores.txt") as f:\n    for line in f:\n        score = int(line)\n        if score > best:\n            best = score\n\nprint("Best score:", best)',
+      why: TX['s20.why2'] },
+    { tab: '"w" erased my file',
+      bad: [['main.py', 'with open("groceries.txt", "w") as f:\n    f.write("coffee\\n")\n\nprint("Added coffee")'], ['groceries.txt', GROCERIES]],
+      fix: 'with open("groceries.txt", "a") as f:\n    f.write("coffee\\n")\n\nprint("Added coffee")',
+      why: TX['s20.why3'], reset: true },
+    { tab: 'Forgot the module name',
+      bad: [['main.py', 'import statistics\n\nscores = [88, 92, 79, 95]\nprint(mean(scores))']],
+      fix: 'import statistics\n\nscores = [88, 92, 79, 95]\nprint(statistics.mean(scores))',
+      why: TX['s20.why4'] },
+    { tab: 'Used the file too late',
+      bad: [['main.py', 'with open("groceries.txt") as f:\n    print("The file is open")\n\nfor line in f:\n    print(line.strip())'], ['groceries.txt', GROCERIES]],
+      fix: 'with open("groceries.txt") as f:\n    print("The file is open")\n\n    for line in f:\n        print(line.strip())',
+      why: TX['s20.why5'] },
+    { tab: 'Named a file csv.py',
+      bad: [['main.py', DR + 'print(row["name"])'], ['csv.py', '# my notes about CSV files\n\nprint("practicing with csv files")'], ['candy.csv', CANDY]],
+      rename: 'notes.py',
+      why: TX['s20.why6'] }
+  ];
+  let mi = 0;
+  const whyEl = () => $('s20why');
+  const wait = () => { whyEl().className = 'why wait'; whyEl().textContent = 'Run the code, then press Show fix'; };
+  const lab = makeLab($('s20lab'), {
+    files: M[0].bad, open: 'groceries.txt',
+    extras: [['Show fix', l => {
+      const m = M[mi];
+      if (m.rename) l.load(m.bad.map(([n, t]) => [n === 'csv.py' ? m.rename : n, t]));
+      else { if (m.reset) l.load(m.bad); l.setCode(m.fix, 'main.py'); }
+      l.orig = m.bad;
+      whyEl().className = 'why'; whyEl().innerHTML = m.why;
+      l.run();
+    }]],
+    side: '<p class="why wait" id="s20why"></p>'
+  });
+  lab.onReset = wait;
+  makeTabs($('s20tabs'), M.map(m => m.tab), i => { mi = i; lab.load(M[i].bad); wait(); });
+})();
+
+/* ---------- Slide 21: review ---------- */
+(() => {
+  const T = (t, bg) => `<span class="tag" style="background:${bg}">${t}</span>`;
+  const rows = [
+    ['import csv', T('import', '#efe8fd') + '<span>' + TX['s21.r1'] + '</span>'],
+    ['import candy_tools', T('your own module', '#efe8fd') + '<span>' + TX['s21.r2'] + '</span>'],
+    ['', ''],
+    ['candies = candy_tools.load("candy.csv")', T('module.function', '#efe8fd') + '<span>' + TX['s21.r8'] + '</span>'],
+    ['', ''],
+    ['best = ""', ''],
+    ['top = 0', ''],
+    ['with open("candy.csv") as f:', T('open', '#fff2a8') + '<span>' + TX['s21.r3'] + '</span>'],
+    ['    for row in csv.DictReader(f):', T('DictReader', '#e6efff') + '<span>' + TX['s21.r4'] + '</span>'],
+    ['        win = int(row["win_percent"])', T('text', '#ffd9a8') + '<span>' + TX['s21.r5'] + '</span>'],
+    ['        if win > top:', ''],
+    ['            top = win', ''],
+    ['            best = row["name"]', ''],
+    ['', ''],
+    ['with open("best.txt", "w") as f:', T('"w"', '#fff2a8') + '<span>' + TX['s21.r6'] + '</span>'],
+    ['    f.write(best + "\\n")', T('write', '#dff3e4') + '<span>' + TX['s21.r7'] + '</span>']
+  ];
+
+  $('s21recap').innerHTML = rows.map(([c, a], i) => `<div class="rc${i === 0 ? ' first' : ''}${i === rows.length - 1 ? ' last' : ''}${c ? '' : ' blank'}">${hl(c) || ' '}</div><div class="ra">${a}</div>`).join('');
+})();
+
+/* ---------- Slide 22: practice ---------- */
+(() => {
+  const CH = [
+    { tab: 'Add them up',
+      desc: TX['s22.desc1'],
+      files: [['main.py', '# read prices.txt and print the total\n'], ['prices.txt', '12\n7\n30\n5\n']],
+      hint: TX['s22.hint1'],
+      tests: [['Prints 54', 'len(lines) > 0 and lines[-1].split()[-1] in ("54", "54.0")', 'The last thing printed should be the total, which is 54']] },
+    { tab: 'Save a list',
+      desc: TX['s22.desc2'],
+      files: [['main.py', 'guests = ["Ana", "Ben", "Chloe", "Dev"]\n\n# write each name to guests.txt\n']],
+      keep: true,
+      hint: TX['s22.hint2'],
+      tests: [
+        ['guests.txt was made', 'file("guests.txt") is not None', 'Open the file with open("guests.txt", "w")'],
+        ['It has 4 lines', 'len(flines("guests.txt")) == 4', 'Every name needs a \\n after it so that it gets its own line'],
+        ['The names are right', 'flines("guests.txt") == ["Ana", "Ben", "Chloe", "Dev"]', 'The lines should be Ana, Ben, Chloe and Dev']] },
+    { tab: 'Count the chocolate',
+      desc: TX['s22.desc3'],
+      files: [['main.py', 'import csv\n\n# count the chocolate candies and print the count\n'], ['candy.csv', CANDY]],
+      view: 'table',
+      hint: TX['s22.hint3'],
+      tests: [['Prints 37', 'len(lines) > 0 and lines[-1].split()[-1] == "37"', 'The last thing printed should be the count, which is 37']] },
+    { tab: 'Your own module',
+      desc: TX['s22.desc4'],
+      files: [['main.py', 'import shapes\n\nprint(shapes.area(3, 4))\nprint(shapes.perimeter(3, 4))'], ['shapes.py', '# write area(width, height) and perimeter(width, height) here\n']],
+      hint: TX['s22.hint4'],
+      tests: [
+        ['area(3, 4) gives 12', 'len(lines) > 0 and lines[0] == "12"', 'The first line printed should be 12'],
+        ['perimeter(3, 4) gives 14', 'len(lines) > 1 and lines[1] == "14"', 'The second line printed should be 14']] }
+  ];
+  let ci = 0;
+  const lab = makeLab($('s22lab'), {
+    files: CH[0].files, keepFiles: true,
+    extras: [['Hint', () => { $('s22hint').style.display = 'block'; }]],
+    side: '<div class="label">Tests</div><ul class="results" id="s22res"></ul><div class="hint" id="s22hint"></div>'
+  });
+  const idle = () => { $('s22res').innerHTML = '<li class="muted">Press Run to test your code</li>'; };
+  lab.onReset = idle;
+  lab.onDone = async r => {
+    const res = $('s22res');
+    if (!r.py){ res.innerHTML = '<li class="err">Python could not start</li>'; return; }
+    if (lab.py.length > 1 && lab.entry !== 'main.py'){ res.innerHTML = '<li class="muted">The tests check <code>main.py</code>. Click the main.py tab and run that.</li>'; return; }
+    if (r.err){ res.innerHTML = '<li class="err">Your code stopped with an error. Fix it and run again.</li>'; return; }
+    const t = CH[ci].tests, fn = r.py.globals.get('_lab_check');
+    const ok = JSON.parse(fn(JSON.stringify(t.map(x => x[1])), r.text)); fn.destroy();
+    res.innerHTML = t.map(([label, , fail], i) => ok[i] ? `<li><span class="good">&#10003;</span> ${esc(label)}</li>` : `<li><span class="badt">&#10007;</span> ${esc(label)}<small>${esc(fail)}</small></li>`).join('')
+      + (ok.every(Boolean) ? '<li class="good" style="margin-top:6px">All tests passed</li>' : '');
+  };
+  makeTabs($('s22tabs'), CH.map(c => c.tab), i => {
+    ci = i;
+    $('s22desc').innerHTML = CH[i].desc;
+    lab.cfg.view = CH[i].view; lab.view = {};
+    lab.load(CH[i].files);
+    $('s22hint').innerHTML = CH[i].hint; $('s22hint').style.display = 'none';
+    idle();
+  });
+})();
+
+/* the paragraph that follows a lab sits under its output */
+document.querySelectorAll('.after').forEach(a => { const sn = a.parentElement.querySelector('.lab .sidenotes'); if (sn) sn.appendChild(a); });
+
+/* ---------- Navigation: bottom buttons (and arrow keys on a keyboard) ---------- */
+const slides = [...document.querySelectorAll('.slide')];
+let cur = 0;
+function show(n){
+  n = Math.max(0, Math.min(slides.length - 1, n));
+  slides[cur].classList.remove('active');
+  cur = n;
+  const s = slides[cur];
+  s.classList.add('active'); s.scrollTop = 0;
+  $('counter').textContent = `${cur + 1} / ${slides.length}`;
+  $('bar').style.width = ((cur + 1) / slides.length * 100) + '%';
+  $('prev').disabled = cur === 0; $('next').disabled = cur === slides.length - 1;
+  history.replaceState(null, '', '#' + (cur + 1));
+  s.querySelectorAll('.CodeMirror').forEach(e => e.CodeMirror.refresh());
+  window.titleGrow(false);
+  if (s.id === 's1') setTimeout(() => window.titleGrow(true), 250);
+}
+$('prev').onclick = () => show(cur - 1);
+$('next').onclick = () => show(cur + 1);
+document.addEventListener('keydown', e => {
+  const t = e.target;
+  if (t.closest && (t.closest('.CodeMirror') || t.matches('input,textarea,select'))) return;
+  if (e.key === 'ArrowRight' || e.key === 'PageDown'){ show(cur + 1); e.preventDefault(); }
+  else if (e.key === 'ArrowLeft' || e.key === 'PageUp'){ show(cur - 1); e.preventDefault(); }
+});
+// stop iOS Safari zooming on a fast double tap
+let lastTouch = 0;
+document.addEventListener('touchend', e => {
+  const now = Date.now();
+  if (now - lastTouch < 350 && !(e.target.closest && e.target.closest('input,textarea,.CodeMirror'))){
+    e.preventDefault();
+    const b = e.target.closest && e.target.closest('button');
+    if (b && !b.disabled) b.click();
+  }
+  lastTouch = now;
+}, { passive: false });
+document.addEventListener('gesturestart', e => e.preventDefault());
+show((parseInt(location.hash.slice(1)) || 1) - 1);
+window.addEventListener('load', () => setTimeout(() => loadPy().catch(() => {}), 1500));
+</script>
+</body>
+</html>
