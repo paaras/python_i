@@ -123,6 +123,7 @@ p code,li code,td code,.legend code,.why code{background:var(--code-bg);border:1
 .pipe .arrow{font-size:26px;color:var(--muted)}
 .pipe .code{margin:0;font-size:calc(var(--cfs)*.72);line-height:1.5;padding:11px 14px}
 .pipe .paper .pbody{font-size:calc(var(--cfs)*.72);max-height:none}
+.pipe .out{margin:0;font-size:calc(var(--cfs)*.72);max-height:none}
 .chart{border:1.5px solid var(--ink);border-radius:9px;padding:11px 14px;font-size:calc(var(--cfs)*.72);display:grid;gap:6px}
 .chart .crow{display:grid;grid-template-columns:minmax(0,1fr);gap:1px}
 .chart .cname{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -160,7 +161,7 @@ a.btn{text-decoration:none;display:inline-block}
 .recap .rc.first{border-top:1px solid var(--line);border-radius:9px 9px 0 0;padding-top:11px}
 .recap .rc.last{border-bottom:1px solid var(--line);border-radius:0 0 9px 9px;padding-bottom:11px}
 .recap .ra{font-size:calc(var(--fs)*.8);display:flex;align-items:center;gap:10px;color:#333;line-height:1.3}
-.tag{font-family:var(--mono);font-size:.85em;font-weight:700;border-radius:5px;padding:1px 8px;white-space:nowrap}
+.tag{font-family:var(--mono);font-size:.9em;font-weight:700;border-radius:5px;padding:1px 8px;white-space:nowrap}
 
 /* practice */
 .results{list-style:none;padding:0;margin:0 0 14px;font-size:calc(var(--fs)*.9);line-height:1.45}
@@ -215,7 +216,12 @@ a.btn{text-decoration:none;display:inline-block}
 #pystat{font-size:14px}
 .bar{position:fixed;left:0;bottom:calc(var(--navh) + env(safe-area-inset-bottom,0px));height:3px;background:var(--ink);transition:width .3s;z-index:10}
 .tch{display:none}
-@media (hover:none) and (pointer:coarse){ .kb{display:none} .tch{display:inline} }
+@media (hover:none) and (pointer:coarse){
+  .kb{display:none} .tch{display:inline}
+  /* bigger targets for fingers */
+  .chip,.pytab{min-height:38px;padding-top:8px;padding-bottom:8px}
+  .paper .phead button{min-height:32px;padding:4px 12px}
+}
 
 @media (max-height:780px) and (min-width:901px){
   :root{--fs:clamp(17px,0.85vw + 7px,26px);--cfs:clamp(14px,0.75vw + 5px,22px)}
@@ -236,10 +242,13 @@ a.btn{text-decoration:none;display:inline-block}
   .lab .notes{order:5;margin-top:6px}
   .lab .sidenotes{order:6;margin-top:14px}
   .lab .notes:empty,.lab .sidenotes:empty{display:none}
+  /* the pieces of a lab are flex items here, so they need this to stay inside the screen (a wide table scrolls in its own box) */
+  .lab .pytabs,.lab .ed,.lab .controls,.lab .notes,.lab .fbox,.lab .label,.lab .out,.lab .runs,.lab .sidenotes{min-width:0;max-width:100%}
+  .paper{max-width:100%}
   .slide{padding:22px 16px 28px}
   .pipe{grid-template-columns:minmax(0,1fr);max-width:520px}
   .pipe .arrow{transform:rotate(90deg);justify-self:center}
-  .pipe .code,.pipe .paper .pbody,.chart{font-size:var(--lfs)}
+  .pipe .code,.pipe .paper .pbody,.pipe .out,.chart{font-size:var(--lfs)}
 }
 @media (max-width:600px){
   :root{--fs:17px;--cfs:15px;--navh:60px}
@@ -271,7 +280,7 @@ a.btn{text-decoration:none;display:inline-block}
     <div class="arrow">&#9654;</div>
     <div class="code" id="s1code"></div>
     <div class="arrow">&#9654;</div>
-    <pre class="out" id="s1out" style="margin:0;font-size:calc(var(--cfs)*.72);max-height:none"></pre>
+    <pre class="out" id="s1out"></pre>
   </div>
   <p class="muted hint-nav"><span class="kb">Use the arrow keys or the buttons at the bottom to move between slides</span><span class="tch">Use the buttons at the bottom to move between slides</span></p>
 </div></section>

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Python Functions</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
@@ -164,6 +164,13 @@ p code,li code,.desc code{font-family:var(--mono);background:var(--code-bg);bord
 .results{list-style:none;padding:0;margin:8px 0 0;font-family:var(--mono);font-size:var(--cfs)}
 .results li{padding:4px 0}
 .hint{font-size:var(--fs);border-left:5px solid #e0c200;background:#fffbe6;padding:10px 16px;margin:10px 0;display:none}
+
+/* phones: a double tap never zooms, nothing is wider than the screen, and the bottom bar stays on one line */
+*{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+.CodeMirror textarea{font-size:16px}
+@media(max-width:820px){.two,.tryrow{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){#pystat{display:none}.nav{padding:0 12px}.nav .right{width:100%;justify-content:space-between}.nav .btn{white-space:nowrap}}
 </style>
 </head>
 <body>
@@ -734,7 +741,9 @@ function drawS12(){
   const xm = Math.max(r1.right, r2.right, r4.right) - W.left + 50, c = 14;
   svg.innerHTML = `<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#111"/></marker></defs>
   <path d="M${x0},${y0} H${xm - c} Q${xm},${y0} ${xm},${y0 - c} V${y1 + c} Q${xm},${y1} ${xm - c},${y1} H${x1}" fill="none" stroke="#111" stroke-width="2.5" marker-end="url(#ah)"/>
-  <text x="${xm + 12}" y="${(y0 + y1) / 2 + 6}" font-size="17" fill="#666" font-family="sans-serif">goes into name</text>`;
+  ${xm + 140 > W.width
+    ? `<text x="${xm - 10}" y="${(y0 + y1) / 2 + 6}" text-anchor="end" font-size="15" fill="#666" font-family="sans-serif">goes into name</text>`
+    : `<text x="${xm + 12}" y="${(y0 + y1) / 2 + 6}" font-size="17" fill="#666" font-family="sans-serif">goes into name</text>`}`;
 }
 window.addEventListener('resize', () => { if (slides[cur] && slides[cur].id === 's12') drawS12(); });
 
@@ -982,6 +991,18 @@ document.addEventListener('keydown', e => {
   if (e.key === 'ArrowRight' || e.key === 'PageDown'){ show(cur + 1); e.preventDefault(); }
   else if (e.key === 'ArrowLeft' || e.key === 'PageUp'){ show(cur - 1); e.preventDefault(); }
 });
+// stop iOS Safari zooming on a fast double tap
+let lastTouch = 0;
+document.addEventListener('touchend', e => {
+  const now = Date.now();
+  if (now - lastTouch < 350 && !(e.target.closest && e.target.closest('input,textarea,.CodeMirror'))){
+    e.preventDefault();
+    const b = e.target.closest && e.target.closest('button');
+    if (b && !b.disabled) b.click();
+  }
+  lastTouch = now;
+}, { passive: false });
+document.addEventListener('gesturestart', e => e.preventDefault());
 show((parseInt(location.hash.slice(1)) || 1) - 1);
 window.addEventListener('load', () => setTimeout(() => loadPy().catch(() => {}), 1500));
 </script>

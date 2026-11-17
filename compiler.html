@@ -47,6 +47,8 @@
 html, body { height: 100%; margin: 0; }
 /* JetBrains Mono joins != >= -> into single symbols; show the characters as typed */
 * { font-variant-ligatures: none !important; font-feature-settings: "liga" 0, "calt" 0 !important; }
+/* a double tap never zooms the page, on any element */
+* { touch-action: manipulation; }
 body {
   background: var(--bg); color: var(--fg);
   font: 14px/1.4 var(--ui);
@@ -283,8 +285,9 @@ table.vars tr.changed td.val { background: var(--hl); }
   .btn { padding: 6px 10px; }
   .CodeMirror { font-size: 13px; }
   #explorer { position: absolute; inset: 0; z-index: 5; width: auto; border-right: 0; }
-  .row-btn { opacity: 1; }
+  .row-btn { opacity: 1; min-width: 36px; min-height: 36px; }
   .file-row { min-height: 40px; }
+  .btn.small { min-height: 34px; padding-left: 12px; padding-right: 12px; }
 }
 </style>
 </head>
@@ -1543,6 +1546,21 @@ document.addEventListener('keydown', e => {
   setExplorer(store.get(EXPLORER_KEY) === '1');
   startWorker();
 })();
+})();
+</script>
+<script>
+/* iOS Safari can still zoom on a fast double tap. Cancel the second tap's default, and pass it on to the button it was on. */
+(() => {
+  let lastTap = 0;
+  document.addEventListener('touchend', e => {
+    const now = Date.now(), t = e.target;
+    if (now - lastTap < 350 && t.closest && !t.closest('input, textarea, select, .CodeMirror')) {
+      e.preventDefault();
+      const b = t.closest('button, [role=tab]');
+      if (b && !b.disabled) b.click();
+    }
+    lastTap = now;
+  }, { passive: false });
 })();
 </script>
 </body>
