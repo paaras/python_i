@@ -45,6 +45,8 @@
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
+/* JetBrains Mono joins != >= -> into single symbols; show the characters as typed */
+* { font-variant-ligatures: none !important; font-feature-settings: "liga" 0, "calt" 0 !important; }
 body {
   background: var(--bg); color: var(--fg);
   font: 14px/1.4 var(--ui);
@@ -241,10 +243,9 @@ table.vars tr.changed td.val { background: var(--hl); }
 
 /* share sheet */
 #shareSheet {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  flex: none;
   background: var(--bg); border-top: 1px solid var(--line);
-  box-shadow: 0 -8px 24px rgba(0,0,0,.08);
-  padding: 14px max(16px, env(safe-area-inset-right, 0px)) calc(14px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  padding: 14px max(16px, env(safe-area-inset-right, 0px)) 14px max(16px, env(safe-area-inset-left, 0px));
   display: flex; flex-direction: column; gap: 8px;
 }
 .share-row { display: flex; gap: 8px; }
@@ -1213,6 +1214,7 @@ function openShare() {
   $('shareMeta').textContent = link.skipped.length ? `Binary files left out: ${link.skipped.join(', ')}` : '';
   $('shareMeta').hidden = !link.skipped.length;
   $('shareSheet').hidden = false;
+  editor.refresh();
   $('toast').hidden = true;
   copyLink();
 }
@@ -1226,7 +1228,7 @@ async function copyLink() {
 }
 $('shareBtn').onclick = openShare;
 $('copyBtn').onclick = copyLink;
-$('closeShareBtn').onclick = () => { $('shareSheet').hidden = true; };
+$('closeShareBtn').onclick = () => { $('shareSheet').hidden = true; editor.refresh(); };
 $('shareUrl').onfocus = e => e.target.select();
 window.addEventListener('hashchange', loadFromHash);
 
@@ -1399,7 +1401,7 @@ $('runBtn').onclick = run;
 $('clearBtn').onclick = () => { if (!session) { out.textContent = ''; clearErrMark(); } };
 document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); if (!dbg) run(); }
-  else if (e.key === 'Escape' && !$('shareSheet').hidden) $('shareSheet').hidden = true;
+  else if (e.key === 'Escape' && !$('shareSheet').hidden) { $('shareSheet').hidden = true; editor.refresh(); }
 });
 
 // ---------------- Debugger ----------------
