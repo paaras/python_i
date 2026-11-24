@@ -1,0 +1,972 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Object Oriented Design</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/runmode/runmode.min.js"></script>
+<style>
+/* Colors that carry meaning in this deck: blue lines are the new code on a slide,
+   solid arrows mean "is a" (inheritance), dashed arrows mean "has a" (an attribute). */
+:root{
+  --ink:#14171c;--muted:#636a76;--line:#d6d9df;--code-bg:#f6f7f9;
+  --accent:#1a5fd0;--accent-soft:#e6efff;--hl:#fff2a8;
+  --ok:#1e7e34;--ok-soft:#dff3e4;--bad:#c62828;--bad-soft:#fde0e0;
+  --fs:clamp(18px,1.15vw + 7px,30px);--cfs:clamp(15px,0.95vw + 5px,26px);
+  --lfs:calc(var(--cfs)*.9);
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --navh:56px;
+}
+*{box-sizing:border-box;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html,body{margin:0;height:100%;background:#fff;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden}
+.slide{position:fixed;top:0;left:0;right:0;bottom:calc(var(--navh) + env(safe-area-inset-bottom,0px));overflow-y:auto;overflow-x:hidden;padding:36px 48px 24px;display:none;flex-direction:column}
+.slide.active{display:flex}
+.inner{width:100%;max-width:min(1500px,100%);margin:0 auto}
+h1{font-size:clamp(28px,2.2vw + 10px,54px);margin:0 0 22px;line-height:1.15;letter-spacing:-.01em}
+p{font-size:var(--fs);line-height:1.5;margin:0 0 22px;max-width:none;text-wrap:pretty}
+code{font-family:var(--mono)}
+p code,li code,td code,.legend code,.card code,.why code,.checks code{background:var(--code-bg);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:.88em;white-space:nowrap}
+.muted{color:var(--muted)}
+.label{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin:0 0 7px;font-weight:600}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:40px;align-items:start}
+.btn{font:inherit;font-size:17px;padding:8px 15px;border:1.5px solid var(--ink);background:#fff;color:var(--ink);border-radius:7px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:#f0f0f0}
+.btn.primary{background:var(--ink);color:#fff}
+.btn.primary:hover{background:#333}
+.btn.stop{background:var(--bad);border-color:var(--bad);color:#fff}
+.btn:disabled{opacity:.35;cursor:default}
+a.btn{text-decoration:none;display:inline-block}
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:12px 0 16px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.tab{font:inherit;font-size:17px;padding:7px 14px;border:1.5px solid var(--ink);background:#fff;color:var(--ink);border-radius:7px;cursor:pointer}
+.tab.on{background:var(--ink);color:#fff}
+
+/* syntax colors, shared by the editors and the static code */
+.cm-keyword{color:#8b2fb8;font-weight:600}
+.cm-string{color:#a04a10}
+.cm-number{color:#0b6e8f}
+.cm-comment{color:#7a818c;font-style:italic}
+.cm-builtin{color:#1a5fd0}
+.cm-def{color:#14171c;font-weight:600}
+.code{font-family:var(--mono);font-size:var(--lfs);line-height:1.6;background:var(--code-bg);border:1px solid var(--line);border-radius:9px;padding:13px 17px;white-space:pre;overflow-x:auto;margin:0 0 20px}
+.code .same{background:var(--hl);display:inline-block;width:100%}
+
+/* legend: a piece of code on the left, what it means on the right */
+.legend{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px 18px;align-items:baseline;margin:0 0 22px;font-size:calc(var(--fs)*.9);line-height:1.42}
+.legend .sw{font-family:var(--mono);font-size:var(--lfs);padding:2px 9px;border-radius:5px;white-space:nowrap;background:var(--accent-soft)}
+.pts{font-size:calc(var(--fs)*.92);line-height:1.45;margin:0 0 18px;padding-left:1.15em;max-width:70ch}
+.pts li{margin:0 0 9px}
+.steps{font-size:var(--fs);line-height:1.45;margin:0 0 20px;padding-left:1.3em;max-width:66ch}
+.steps li{margin:0 0 14px;padding-left:4px}
+.why{font-size:calc(var(--fs)*.92);line-height:1.5;margin:12px 0 0;border-left:5px solid var(--accent);background:var(--accent-soft);padding:12px 18px;border-radius:0 10px 10px 0;max-width:70ch}
+
+/* ---------- lab: code on the left, the game screen on the right ---------- */
+.lab{display:grid;grid-template-columns:minmax(0,1fr) clamp(360px,34vw,560px);gap:32px;align-items:start}
+.lab .CodeMirror{height:auto;font-family:var(--mono);font-size:var(--lfs);line-height:1.5;border:1px solid var(--line);border-radius:9px;background:var(--code-bg);color:var(--ink)}
+.lab .CodeMirror-scroll{max-height:min(60vh,40em);min-height:3em}
+.lab .CodeMirror-gutters{background:var(--code-bg);border-right:1px solid var(--line)}
+.lab .CodeMirror-linenumber{color:#a2a8b2}
+.lab .CodeMirror pre.CodeMirror-line{padding-left:10px}
+.CodeMirror textarea{font-size:16px}
+.newline{background:var(--accent-soft)}
+.errline{background:var(--bad-soft)}
+.screen{display:block;width:100%;max-width:600px;height:auto;aspect-ratio:2/1;background:#fff;border:1.5px solid var(--ink);border-radius:9px;outline:none;touch-action:none;-webkit-user-select:none;user-select:none}
+.screen:focus{box-shadow:0 0 0 3px var(--accent-soft);border-color:var(--accent)}
+.ghint{font-size:14px;color:var(--muted)}
+.pad{display:none;gap:8px;margin:8px 0 0;max-width:600px}
+.pad button{flex:1;min-height:46px;border:1.5px solid var(--ink);border-radius:8px;background:#fff;color:var(--ink);font:inherit;font-size:16px;cursor:pointer;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.pad button.wide{flex:2}
+.pad button.on{background:var(--accent-soft)}
+.pad svg{width:.8em;height:.8em;fill:currentColor}
+.out{font-family:var(--mono);font-size:calc(var(--lfs)*.92);line-height:1.5;background:#fff;border:1.5px solid var(--ink);border-radius:9px;padding:10px 14px;white-space:pre-wrap;word-break:break-word;margin:12px 0 0;max-height:13em;overflow-y:auto;max-width:600px}
+.out .e{color:var(--bad)}
+.lab .sidenotes{margin-top:12px}
+.lab .sidenotes p{font-size:calc(var(--fs)*.8);line-height:1.36;margin-bottom:7px}
+.lg code{background:var(--accent-soft) !important;border-color:#b9cdf5 !important;margin-right:4px}
+.lab .sidenotes > :last-child{margin-bottom:0}
+.lab .side .controls{margin:0 0 10px}
+.lab.nocode{grid-template-columns:minmax(0,600px)}
+
+/* title */
+#s1 .inner{margin:auto;text-align:center}
+#s1 h1{font-size:clamp(40px,5.2vw,82px);margin-bottom:26px}
+#s1 svg{width:min(100%,640px);height:auto;border:2px solid var(--ink);border-radius:12px;background:#fff}
+.hint-nav{margin:30px auto 0;font-size:17px}
+
+/* class cards */
+.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:0 0 20px}
+.card{border:2px solid var(--ink);border-radius:12px;padding:0;overflow:hidden;font-family:var(--mono);font-size:calc(var(--fs)*.78);line-height:1.4;background:#fff}
+.card h3{margin:0;padding:8px 14px;font-family:var(--mono);font-size:1.05em;border-bottom:2px solid var(--ink);display:flex;align-items:center;gap:10px}
+.card h3 i{width:16px;height:16px;border-radius:3px;flex:none;display:inline-block}
+.card .sec{padding:9px 14px 10px}
+.card .sec + .sec{border-top:1px solid var(--line)}
+.card .k{font-family:system-ui,sans-serif;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:2px}
+
+/* pictures */
+.pic{width:100%;height:auto;display:block}
+.picbox{border:1.5px solid var(--ink);border-radius:9px;background:#fff;max-width:600px;overflow:hidden}
+.readout{font-family:var(--mono);font-size:var(--cfs);background:var(--code-bg);border:1px solid var(--line);border-radius:9px;padding:10px 16px;margin:14px 0 0;max-width:600px;white-space:pre-wrap}
+.readout b{background:var(--hl);border-radius:4px;padding:0 4px;font-weight:600}
+.checks{list-style:none;margin:14px 0 0;padding:0;font-size:calc(var(--fs)*.84);line-height:1.4;max-width:600px}
+.checks li{display:grid;grid-template-columns:1.6em minmax(0,1fr);gap:4px;padding:5px 0;border-bottom:1px solid var(--line)}
+.checks li:last-child{border-bottom:0;font-weight:700;padding-top:9px}
+.checks .m{font-weight:700}
+.checks .yes .m{color:var(--ok)} .checks .no .m{color:var(--bad)}
+.checks small{display:block;color:var(--muted);font-size:.86em}
+.loop{max-width:760px;margin:0 0 20px}
+.loop .st rect{fill:#fff;stroke:var(--ink);stroke-width:2}
+.loop .st text{font-family:var(--mono);font-size:19px;fill:var(--ink)}
+.loop .st{animation:lp 3.6s infinite}
+.loop .st.b{animation-delay:1.2s} .loop .st.c{animation-delay:2.4s}
+@keyframes lp{0%,30%{opacity:1}33.4%,100%{opacity:.6}}
+.loop .st rect{animation:lpf 3.6s infinite;animation-delay:inherit}
+@keyframes lpf{0%,30%{fill:var(--hl)}33.4%,100%{fill:#fff}}
+.vs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;margin:0 0 6px}
+.vs .code{margin-bottom:8px}
+.vs .cap{font-size:calc(var(--fs)*.84);font-weight:700;margin:0 0 8px}
+.vs .cap.no{color:var(--bad)} .vs .cap.yes{color:var(--ok)}
+
+/* design diagram */
+.dg text{font-family:var(--mono);font-size:19px;fill:var(--ink)}
+.dg .cls rect{fill:#fff;stroke:var(--ink);stroke-width:2;cursor:pointer}
+.dg .cls:hover rect{fill:var(--code-bg)}
+.dg .cls.on rect{fill:var(--hl)}
+.dg .cls text{pointer-events:none;text-anchor:middle;dominant-baseline:central;font-weight:600}
+.dg .isa{stroke:var(--ink);stroke-width:2;fill:none}
+.dg .has{stroke:var(--accent);stroke-width:2;fill:none;stroke-dasharray:7 6}
+.dg .lbl{font-family:system-ui,sans-serif;font-size:15px;fill:var(--muted)}
+.dg .lbl.h{fill:var(--accent)}
+.dg .draw{stroke-dasharray:1;stroke-dashoffset:1}
+.slide.active .dg .draw{animation:drawin .7s ease forwards}
+.slide.active .dg .has.draw{animation:drawin2 .7s ease forwards}
+@keyframes drawin{to{stroke-dashoffset:0}}
+@keyframes drawin2{from{opacity:0}to{opacity:1}}
+.dg .has.draw{stroke-dasharray:7 6;stroke-dashoffset:0;opacity:0}
+.dg .pop{opacity:0}
+.slide.active .dg .pop{animation:popin .35s ease forwards}
+@keyframes popin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.detail{border:2px solid var(--ink);border-radius:12px;padding:14px 18px;font-size:calc(var(--fs)*.88);line-height:1.45;min-height:9em}
+.detail h3{margin:0 0 8px;font-family:var(--mono);font-size:1.1em}
+.detail p{font-size:inherit;margin:0 0 8px}
+.detail .k{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;display:block;margin:8px 0 2px}
+.keyrow{display:flex;gap:26px;flex-wrap:wrap;font-size:calc(var(--fs)*.82);margin:10px 0 0;align-items:center}
+.keyrow span{display:inline-flex;align-items:center;gap:8px}
+.keyrow svg{width:46px;height:12px}
+
+/* review */
+.recap{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px 26px;align-items:center;margin:0 0 22px}
+.recap .rc{font-family:var(--mono);font-size:var(--lfs);white-space:pre;background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:7px 14px;line-height:1.5}
+.recap .ra{font-size:calc(var(--fs)*.86);line-height:1.35}
+
+/* nav */
+.nav{position:fixed;left:0;right:0;bottom:0;height:calc(var(--navh) + env(safe-area-inset-bottom,0px));padding:0 18px env(safe-area-inset-bottom,0px);border-top:1px solid #e5e5e5;display:flex;align-items:center;justify-content:space-between;background:#fff;z-index:10}
+.nav .right{display:flex;gap:10px;align-items:center}
+#counter{font-size:16px;color:var(--muted);min-width:64px;text-align:center}
+#pystat{font-size:14px}
+.bar{position:fixed;left:0;bottom:calc(var(--navh) + env(safe-area-inset-bottom,0px));height:3px;background:var(--ink);transition:width .3s;z-index:10}
+[hidden]{display:none !important}
+.tch{display:none}
+@media (hover:none) and (pointer:coarse){
+  .kb{display:none} .tch{display:inline}
+  .pad{display:flex} .ghint{display:none}
+}
+@media (max-height:780px) and (min-width:901px){
+  :root{--fs:clamp(17px,0.85vw + 7px,26px);--cfs:clamp(14px,0.75vw + 5px,22px)}
+  .slide{padding-top:22px;padding-bottom:12px}
+  h1{margin-bottom:14px}
+  p{margin-bottom:14px}
+  .steps li{margin-bottom:9px}
+}
+@media (max-width:1100px){ .cards{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:900px){
+  .two{grid-template-columns:minmax(0,1fr);gap:20px}
+  .lab{display:flex;flex-direction:column;gap:0}
+  .lab .main{margin-bottom:12px}
+  .lab .main,.lab .side{min-width:0;max-width:100%;width:100%}
+  .lab .CodeMirror-scroll{max-height:46vh}
+  .slide{padding:22px 16px 28px}
+  .vs{grid-template-columns:minmax(0,1fr);gap:8px}
+  .recap{grid-template-columns:minmax(0,1fr);gap:4px}
+  .recap .rc{white-space:pre-wrap}
+  .recap .ra{padding:0 0 12px 4px}
+}
+@media (max-width:600px){
+  :root{--fs:17px;--cfs:15px;--navh:60px}
+  h1{font-size:27px;margin-bottom:14px}
+  #s1 h1{font-size:40px}
+  #pystat{display:none}
+  .nav{padding-left:12px;padding-right:12px}
+  .nav .right{width:100%;justify-content:space-between}
+  .legend{grid-template-columns:minmax(0,1fr);gap:3px}
+  .legend .sw{justify-self:start;margin-top:9px;white-space:pre-wrap}
+  .code{white-space:pre-wrap;word-break:break-word;padding:10px 12px}
+  .cards{grid-template-columns:minmax(0,1fr)}
+}
+.two p,.steps{max-width:70ch}
+
+#s13a,#s13b{font-size:calc(var(--lfs)*.88);line-height:1.5;margin-bottom:0}
+
+/* the piece of code a slide is about, with numbered notes */
+.ex{font-family:var(--mono);font-size:var(--lfs);line-height:1.45;background:var(--code-bg);border:1px solid var(--line);border-radius:9px;padding:10px 0;overflow-x:auto}
+.xl{white-space:pre;padding:0 16px 0 46px;position:relative}
+.xl.on{background:var(--accent-soft)}
+.xl.hot{background:var(--hl)}
+.xl.gap{color:#9aa1ac}
+.bd,.calls li::before{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;font:700 14px/24px system-ui,sans-serif;text-align:center}
+.xl .bd{position:absolute;left:11px;top:calc(50% - 12px)}
+.calls{list-style:none;padding:0;margin:0 0 14px;counter-reset:c}
+.calls li{counter-increment:c;position:relative;padding:1px 0 1px 36px;margin:0 0 10px;font-size:calc(var(--fs)*.86);line-height:1.4;cursor:default}
+.calls li::before{content:counter(c);position:absolute;left:0;top:2px}
+.tip{font-size:calc(var(--fs)*.86) !important;margin:0 0 14px !important}
+.lead{font-weight:600;margin-bottom:10px}
+.lab .sidenotes{margin:0}
+.lab.nocode{grid-template-columns:minmax(0,1fr)}
+.pts{max-width:70ch}
+#s11checks li:not(:last-child){display:none}
+#s11checks li:last-child{font-size:var(--fs);border:0}
+@media (max-height:900px) and (min-width:901px){ .lab:not(.nocode) .screen{max-width:400px} }
+@media (min-width:901px){
+  .lab.hasex{grid-template-columns:minmax(0,calc(var(--n) * var(--lfs) * .602 + 66px)) minmax(0,1fr)}
+  .lab.hasex .side{max-width:680px}
+}
+html,body{touch-action:manipulation}
+@media (min-width:901px){ .two{grid-template-columns:minmax(0,1fr) minmax(0,600px)} }
+.lab.cols .txt > .intro{margin-bottom:18px}
+@media (min-width:901px){
+  .lab.cols{grid-template-columns:minmax(360px,1fr) minmax(0,calc(var(--n) * var(--lfs) * .602 + 66px));grid-template-areas:"txt code" "txt side";grid-template-rows:auto 1fr;column-gap:44px;row-gap:14px}
+  .lab.cols > .txt{grid-area:txt;max-width:640px}
+  .lab.cols > .main{grid-area:code}
+  .lab.cols > .side{grid-area:side;max-width:none}
+  .lab.cols.gl{grid-template-areas:"txt code" "side code"}
+}
+@media (max-width:900px){
+  .lab.cols > .txt{display:contents}
+  .lab.cols .intro{order:1}
+  .lab.cols > .main{order:2}
+  .lab.cols .sidenotes{order:3}
+  .lab.cols > .side{order:4}
+}
+@media (max-height:900px) and (min-width:901px){ .lab.cols .screen{max-width:340px} }
+@media (max-width:600px){ .code{white-space:pre;word-break:normal;font-size:11.5px;overflow-x:auto} .ex{font-size:13px} .xl{padding-left:38px} .xl .bd{left:7px} }
+@media (min-width:901px){
+  .lab.hasex:not(.cols){grid-template-columns:minmax(360px,1fr) minmax(0,calc(var(--n) * var(--lfs) * .602 + 66px));column-gap:44px}
+  .lab.hasex:not(.cols) > .main{grid-column:2;grid-row:1}
+  .lab.hasex:not(.cols) > .side{grid-column:1;grid-row:1;max-width:640px}
+  #s14 .two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  #s14 .two > :first-child{order:2}
+  #s11 .two{grid-template-columns:minmax(0,1fr) auto}
+  #s11 .picbox{max-width:380px}
+}
+#s11 .two > :last-child .code{margin:0}
+.br{display:block;height:.65em}
+.calls li{margin-bottom:14px}
+.lab.cols .txt > .intro{margin-bottom:24px}
+.lab.cols .sidenotes{margin-bottom:22px}
+.pts li{margin-bottom:10px}
+.tip{margin-top:18px !important}
+.xl{padding-right:28px}
+@media (min-width:901px){
+  .lab.cols{column-gap:60px}
+  .lab.hasex:not(.cols){column-gap:60px}
+  .two{gap:56px}
+  #s11 .two{grid-template-columns:minmax(0,1fr) auto;gap:56px}
+  #s11 .two > :last-child .code{padding:20px 28px}
+  #s11 .picbox{max-width:min(420px,42vh);margin-top:22px}
+}
+@media (max-height:900px) and (min-width:901px){ .lab.cols .screen{max-width:300px} }
+</style>
+</head>
+<body>
+<section class="slide" id="s1"><div class="inner">
+  <h1>Object Oriented Design</h1>
+  <svg viewBox="0 0 600 300" role="img" aria-label="A basket catching falling apples">
+    <rect x="140" width="20" height="20" fill="#d62f2f"><animate attributeName="y" dur="6s" repeatCount="indefinite" values="-20;252;252" keyTimes="0;0.33;1"/><animate attributeName="opacity" dur="6s" repeatCount="indefinite" values="1;1;0;0" keyTimes="0;0.33;0.335;1"/></rect>
+    <rect x="400" width="20" height="20" fill="#d62f2f"><animate attributeName="y" dur="6s" repeatCount="indefinite" values="-20;-20;252;252" keyTimes="0;0.33;0.66;1"/><animate attributeName="opacity" dur="6s" repeatCount="indefinite" values="1;1;0;0" keyTimes="0;0.66;0.665;1"/></rect>
+    <rect x="290" width="20" height="20" fill="#d62f2f"><animate attributeName="y" dur="6s" repeatCount="indefinite" values="-20;-20;252;252" keyTimes="0;0.66;0.985;1"/><animate attributeName="opacity" dur="6s" repeatCount="indefinite" values="1;1;0;0" keyTimes="0;0.985;0.99;1"/></rect>
+    <rect x="530" width="30" height="30" fill="#8a8f98"><animate attributeName="y" dur="6s" repeatCount="indefinite" values="-30;-30;300;300" keyTimes="0;0.12;0.5;1"/></rect>
+    <rect y="270" width="60" height="20" fill="#0000ff"><animate attributeName="x" dur="6s" repeatCount="indefinite" values="270;120;120;380;380;270" keyTimes="0;0.3;0.36;0.63;0.7;1"/></rect>
+    <g font-family="system-ui,sans-serif" font-size="20" fill="#14171c">
+      <text x="12" y="28">Score: 0<animate attributeName="opacity" dur="6s" repeatCount="indefinite" values="1;1;0;0" keyTimes="0;0.33;0.335;1"/></text>
+      <text x="12" y="28" opacity="0">Score: 1<animate attributeName="opacity" dur="6s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.33;0.335;0.66;0.665;1"/></text>
+      <text x="12" y="28" opacity="0">Score: 2<animate attributeName="opacity" dur="6s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0;0.66;0.665;0.985;0.99;1"/></text>
+      <text x="12" y="28" opacity="0">Score: 3<animate attributeName="opacity" dur="6s" repeatCount="indefinite" values="0;0;1;1" keyTimes="0;0.985;0.99;1"/></text>
+    </g>
+  </svg>
+  <p class="muted hint-nav"><span class="kb">Use the arrow keys or the buttons at the bottom to move between slides</span><span class="tch">Use the buttons at the bottom to move between slides</span></p>
+</div></section>
+
+<section class="slide" id="s2"><div class="inner">
+  <h1>The apple game</h1>
+  <div class="two">
+    <div>
+      <p>So far, our programs have had one or two classes. This week we'll write the apple game, which has four classes that work together.<span class="br"></span>In the apple game, apples fall from the top of the screen and you catch them in a basket. Press <b>Run</b>, then move the basket with <span class="kb">the left and right arrow keys</span><span class="tch">the buttons under the game</span>.</p>
+      <p class="lead">These are the four classes</p>
+      <ul class="pts"><li><code>Rectangle</code> is a rectangle drawn on the screen</li><li><code>Basket</code> is the rectangle you move</li><li><code>Apple</code> is a rectangle that falls</li><li><code>Game</code> keeps track of the basket, the apples and the score</li></ul>
+    </div>
+    <div id="lab_play"></div>
+  </div>
+</div></section>
+
+<section class="slide" id="s3"><div class="inner">
+  <h1>The engine module</h1>
+  <p>A game has to draw on the screen and check the keyboard. The <code>engine</code> module will do that for us, and we only need four functions from it.</p>
+  <div class="legend">
+    <span class="sw">engine.rect(x, y, width, height, color)</span><span>Draws a rectangle</span>
+    <span class="sw">engine.text(message, x, y)</span><span>Draws text</span>
+    <span class="sw">engine.key_down("left")</span><span>Is <code>True</code> while that key is held down</span>
+    <span class="sw">engine.run(game)</span><span>Starts the game</span>
+  </div>
+  <p>A color is a string like <code>"red"</code>, and a key is a string like <code>"left"</code> or <code>"space"</code>.</p>
+</div></section>
+
+<section class="slide" id="s4"><div class="inner">
+  <h1>The screen</h1>
+  <div class="two">
+    <div>
+      <p>The screen is 600 wide and 300 tall. To draw a rectangle, we have to say where it goes, and we do that with two numbers called <code>x</code> and <code>y</code>.<span class="br"></span>Drag the rectangle to see its <code>x</code> and <code>y</code> change.</p>
+      <ul class="pts"><li><code>x</code> is how far the rectangle is from the left side</li><li><code>y</code> is how far the rectangle is from the top, so a bigger <code>y</code> is <b>lower</b> on the screen</li><li><code>x</code> and <code>y</code> give the position of the rectangle's top left corner</li></ul>
+    </div>
+    <div>
+      <div class="picbox"><svg class="pic" id="s5svg" viewBox="0 0 600 300" style="touch-action:none;cursor:grab">
+        <line id="s5lx" x1="0" y1="0" x2="0" y2="0" stroke="#1a5fd0" stroke-width="2" stroke-dasharray="6 5"/>
+        <line id="s5ly" x1="0" y1="0" x2="0" y2="0" stroke="#c62828" stroke-width="2" stroke-dasharray="6 5"/>
+        <text id="s5tx" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="18" fill="#1a5fd0"></text>
+        <text id="s5ty" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="18" fill="#c62828"></text>
+        <rect id="s5r" width="60" height="20" fill="#0000ff"/>
+        <circle id="s5c" r="5" fill="#14171c"/>
+      </svg></div>
+      <div class="readout" id="s5read"></div>
+    </div>
+  </div>
+</div></section>
+
+<section class="slide" id="s5"><div class="inner">
+  <h1>update and draw</h1>
+  <p>To use the engine, we write a class that has two methods, <code>update</code> and <code>draw</code>. The engine calls them 30 times every second, and each time is called a <b>frame</b>.</p>
+  <div id="lab_loop"></div>
+  <div class="after">
+    <ol class="calls">
+      <li><code>update</code> is where we change things, and here it adds 3 to <code>self.x</code></li>
+      <li><code>draw</code> is where we draw things. The engine erases the screen first, so the rectangle looks like it's moving.</li>
+      <li>The last line makes a <code>Game</code> object and gives it to the engine</li>
+    </ol>
+  </div>
+</div></section>
+
+<section class="slide" id="s6"><div class="inner">
+  <h1>The Rectangle class</h1>
+  <p>The basket and the apples are all drawn as rectangles. So we start with a class called <code>Rectangle</code>, and the other classes will inherit from it.</p>
+  <div id="lab_rect"></div>
+  <div class="after">
+    <ol class="calls">
+      <li>The constructor saves where the rectangle is, how big it is and what color it is</li>
+      <li><code>draw</code> draws the rectangle on the screen</li>
+    </ol>
+  </div>
+</div></section>
+
+<section class="slide" id="s7"><div class="inner">
+  <h1>Using a Rectangle</h1>
+  <p>A class doesn't do anything until we make an object from it. Here the <code>Game</code> class makes one rectangle and draws it.</p>
+  <div id="lab_rect2"></div>
+  <div class="after">
+    <ol class="calls">
+      <li>The game makes a rectangle and saves it in <code>self.basket</code></li>
+      <li>Nothing moves yet, so <code>update</code> only has <code>pass</code></li>
+      <li>The engine calls the game's <code>draw</code>, which calls the rectangle's <code>draw</code></li>
+    </ol>
+    <p class="tip">Press <b>Edit the code</b> and try a different color.</p>
+  </div>
+</div></section>
+
+<section class="slide" id="s8"><div class="inner">
+  <h1>The Basket class</h1>
+  <p>The basket should move when we press the arrow keys, but a <code>Rectangle</code> can't move. So we write a class called <code>Basket</code> that inherits from <code>Rectangle</code> and adds an <code>update</code> method.</p>
+  <div id="lab_basket"></div>
+  <div class="after">
+    <ol class="calls">
+      <li><code>super()</code> runs <code>Rectangle</code>'s constructor, and we pass in the basket's x, y, width, height and color</li>
+      <li><code>update</code> moves the basket left or right while an arrow key is held down</li>
+      <li>The engine only calls the game's <code>update</code>, so the game has to call the basket's <code>update</code></li>
+    </ol>
+  </div>
+</div></section>
+
+<section class="slide" id="s9"><div class="inner">
+  <h1>The Apple class</h1>
+  <p>An apple is also a rectangle. An apple starts at the top of the screen, and its <code>update</code> method moves it down.</p>
+  <div id="lab_apple"></div>
+  <div class="after">
+    <ol class="calls">
+      <li>An apple is given its <code>y</code> when it's made, and <code>random.randint(0, 580)</code> picks a random <code>x</code></li>
+      <li><code>update</code> moves the apple down by 3 every frame</li>
+      <li>The game makes one apple at the top of the screen</li>
+      <li>The game calls the apple's <code>update</code> and <code>draw</code>, the same as the basket's</li>
+    </ol>
+    <p class="tip">Press <b>Run</b> a few times to see the apple fall from different places.</p>
+  </div>
+</div></section>
+
+<section class="slide" id="s10"><div class="inner">
+  <h1>More than one apple</h1>
+  <p>Now we want two apples falling at the same time. We could save them in two attributes, but then <code>update</code> and <code>draw</code> would need a line for each apple. A list is easier.</p>
+  <div id="lab_list"></div>
+  <div class="after">
+    <ol class="calls">
+      <li>The two apples go in a list. The second apple has a <code>y</code> of -150, which is above the top of the screen, so it shows up a little later.</li>
+      <li>The loop calls <code>update</code> on each apple in the list</li>
+      <li>The loop calls <code>draw</code> on each apple in the list</li>
+    </ol>
+    <p class="tip">Press <b>Edit the code</b> and try adding a third apple to the list.</p>
+  </div>
+</div></section>
+
+<section class="slide" id="s11"><div class="inner">
+  <h1>Checking if two rectangles touch</h1>
+  <div class="two">
+    <div>
+      <p>The game needs to know when the basket catches an apple, which is when the two rectangles touch. So we add a method called <code>touches</code> to the <code>Rectangle</code> class.<span class="br"></span>Drag the apple onto the basket and watch the result change.</p>
+      <pre class="code" data-py>def touches(self, other):
+    return (self.x < other.x + other.width and
+            self.x + self.width > other.x and
+            self.y < other.y + other.height and
+            self.y + self.height > other.y)</pre>
+      <ul class="pts"><li><code>basket.touches(apple)</code> is <code>True</code> when the basket and the apple overlap, and <code>False</code> when they don't</li><li>Inside the method, <code>self</code> is the basket and <code>other</code> is the apple</li></ul>
+    </div>
+    <div>
+      <div class="picbox"><svg class="pic" id="s11svg" viewBox="0 0 600 300" style="touch-action:none">
+        <rect id="s11b" x="240" y="160" width="120" height="40" fill="#0000ff"/>
+        <rect id="s11a" width="40" height="40" fill="#d62f2f" style="cursor:grab"/>
+      </svg></div>
+      <ul class="checks" id="s11checks"></ul>
+    </div>
+  </div>
+</div></section>
+
+<section class="slide" id="s12"><div class="inner">
+  <h1>Catching apples</h1>
+  <p>When the basket touches an apple, the player gets a point. The apple then goes back to the top of the screen and falls again.</p>
+  <div id="lab_catch"></div>
+  <div class="after">
+    <ol class="calls">
+      <li><code>back_to_top</code> moves the apple to the top of the screen, at a new random <code>x</code></li>
+      <li>When the basket touches an apple, we add 1 to the score and send the apple back to the top</li>
+      <li><code>self.score</code> starts at 0 in the constructor. To draw the score, we use <code>str()</code> to turn the number into a string.</li>
+    </ol>
+  </div>
+</div></section>
+
+<section class="slide" id="s13"><div class="inner">
+  <h1>Game over</h1>
+  <p>Right now, nothing happens when you miss an apple. We want the game to end when an apple reaches the bottom of the screen, so we add an attribute called <code>game_over</code>.</p>
+  <div id="lab_over"></div>
+  <div class="after">
+    <ol class="calls">
+      <li>When <code>game_over</code> is <code>True</code>, <code>update</code> returns right away, so nothing moves</li>
+      <li>An apple with a <code>y</code> of more than 300 has fallen off the bottom of the screen, so the game is over</li>
+      <li><code>draw</code> shows a message when the game is over</li>
+    </ol>
+    <p class="tip">Press <b>Run</b> to play again.</p>
+  </div>
+</div></section>
+
+<section class="slide" id="s14"><div class="inner">
+  <h1>All the classes together</h1>
+  <div class="two">
+    <div>
+      <svg class="pic dg" id="s18svg" viewBox="0 0 520 250" role="img" aria-label="Diagram of the four classes">
+        <path class="isa draw" pathLength="1" d="M150 110V82H260V60" marker-end="url(#ah)"/>
+        <path class="isa draw" pathLength="1" d="M370 110V82H260"/>
+        <text class="lbl pop" style="animation-delay:.3s" x="160" y="102">is a</text>
+        <text class="lbl pop" style="animation-delay:.3s" x="380" y="102">is a</text>
+        <path class="has draw" style="animation-delay:.8s" d="M60 200V132H84" marker-end="url(#ahb)"/>
+        <path class="has draw" style="animation-delay:.8s" d="M110 222H370V160" marker-end="url(#ahb)"/>
+        <text class="lbl h pop" style="animation-delay:.9s" x="68" y="174">has a</text>
+        <text class="lbl h pop" style="animation-delay:.9s" x="190" y="214">has a list of</text>
+        <g class="cls" data-c="Rectangle"><rect x="190" y="10" width="140" height="44" rx="7"/><text x="260" y="32">Rectangle</text></g>
+        <g class="cls" data-c="Basket"><rect x="90" y="110" width="120" height="44" rx="7"/><text x="150" y="132">Basket</text></g>
+        <g class="cls" data-c="Apple"><rect x="310" y="110" width="120" height="44" rx="7"/><text x="370" y="132">Apple</text></g>
+        <g class="cls on" data-c="Game"><rect x="10" y="200" width="100" height="44" rx="7"/><text x="60" y="222">Game</text></g>
+      </svg>
+      <div class="keyrow">
+        <span><svg viewBox="0 0 46 12"><path d="M0 6H38" stroke="#14171c" stroke-width="2" marker-end="url(#ah)"/></svg><b>is a</b>&nbsp;inherits from</span>
+        <span><svg viewBox="0 0 46 12"><path d="M0 6H38" stroke="#1a5fd0" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#ahb)"/></svg><b>has a</b>&nbsp;keeps in an attribute</span>
+      </div>
+    </div>
+    <div>
+      <p>The apple game is finished, and it has four classes. Click a class to see its attributes and methods.</p>
+      <div class="detail" id="s18detail"></div>
+    </div>
+  </div>
+  <p style="margin-top:24px">We wrote one class at a time and ran the program after each one. Do the same on the homework, so that when something stops working, you'll know the mistake is in the part you just wrote.</p>
+</div></section>
+
+<section class="slide" id="s15"><div class="inner">
+  <h1>Jumping</h1>
+  <p>In the homework, the player has to jump. Press <b>Run</b>, then press space to see how this box jumps.</p>
+  <div id="lab_jump"></div>
+  <div class="after">
+    <ol class="calls">
+      <li>The box starts on the ground. <code>GROUND</code> is the <code>y</code> of the ground and the box is 40 tall, so the box's <code>y</code> is <code>GROUND - 40</code>.</li>
+      <li><code>speed_y</code> is how fast the box is moving down</li>
+      <li><code>jump</code> sets <code>speed_y</code> to -15, which moves the box up, but only if the box is on the ground</li>
+      <li>Every frame, <code>speed_y</code> goes up by 1. The box slows down on the way up, falls back down and stops at the ground.</li>
+    </ol>
+  </div>
+</div></section>
+
+<section class="slide" id="s16"><div class="inner">
+  <h1>Common mistakes</h1>
+  <p>Run the code to see what goes wrong, then press <b>Show fix</b>.</p>
+  <div class="tabs" id="s21tabs"></div>
+  <div id="s21lab"></div>
+</div></section>
+
+<section class="slide" id="s17"><div class="inner">
+  <h1>This week's homework</h1>
+  <div class="two">
+    <div>
+      <p>For homework, you'll write the jumping game, where a blue player jumps over a green cactus. The jumping game uses the same kinds of classes as the apple game.<span class="br"></span>Press <b>Play</b>, then <span class="kb">press space</span><span class="tch">tap the game</span> to jump.</p>
+    </div>
+    <div>
+      <div class="controls"><button class="btn primary" id="s23run">&#9654; Play</button></div>
+      <canvas class="screen" id="s23screen" width="600" height="300" tabindex="0" aria-label="The homework game"></canvas>
+      <p class="muted" style="font-size:15px;margin:8px 0 0"><span class="kb">Press space or click the game to jump</span><span class="tch">Tap the game to jump</span></p>
+    </div>
+  </div>
+</div></section>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#14171c"/></marker><marker id="ahb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#1a5fd0"/></marker></defs></svg>
+
+<div class="bar" id="bar"></div>
+<div class="nav">
+  <span id="pystat" class="muted">Python: not loaded yet</span>
+  <div class="right">
+    <button class="btn" id="prev">&#9664; Back</button>
+    <span id="counter"></span>
+    <button class="btn primary" id="next">Next &#9654;</button>
+  </div>
+</div>
+
+<script>
+const ENGINE = "# engine: a small screen and keyboard for games.\n#\n#   engine.rect(x, y, width, height, color)   draw a rectangle\n#   engine.text(message, x, y)                draw some text\n#   engine.key_down(\"space\")                  True while that key is held down\n#   engine.run(game)                          call game.update() and game.draw() 30 times a second\n#\n# The screen is 600 wide and 300 tall. x goes across from the left edge\n# and y goes down from the top edge.\n\nWIDTH = 600\nHEIGHT = 300\n\n_game = None\n_keys = set()\n_commands = []\n_KEYS = (\"left\", \"right\", \"up\", \"down\", \"space\", \"enter\")\n\n\ndef _number(value, name, func):\n    if isinstance(value, bool) or not isinstance(value, (int, float)):\n        raise TypeError(\"engine.\" + func + \"() needs a number for \" + name + \", but it got \" + repr(value))\n    if value != value or value in (float(\"inf\"), float(\"-inf\")):\n        raise ValueError(\"engine.\" + func + \"() got \" + repr(value) + \" for \" + name)\n    return value\n\n\ndef rect(x, y, width, height, color=\"black\"):\n    \"\"\"Draw a rectangle. x and y are its top left corner.\"\"\"\n    if not isinstance(color, str):\n        raise TypeError(\"engine.rect() needs a color name in quotes, like \\\"red\\\", but it got \" + repr(color))\n    _commands.append([\"rect\", _number(x, \"x\", \"rect\"), _number(y, \"y\", \"rect\"),\n                      _number(width, \"width\", \"rect\"), _number(height, \"height\", \"rect\"), color])\n\n\ndef text(message, x, y, color=\"black\", size=20):\n    \"\"\"Draw text. x and y are the top left corner of the text.\"\"\"\n    if not isinstance(color, str):\n        raise TypeError(\"engine.text() needs a color name in quotes, like \\\"red\\\", but it got \" + repr(color))\n    _commands.append([\"text\", str(message), _number(x, \"x\", \"text\"), _number(y, \"y\", \"text\"),\n                      color, _number(size, \"size\", \"text\")])\n\n\ndef key_down(key):\n    \"\"\"True while the key is held down. Keys: \"left\" \"right\" \"up\" \"down\" \"space\" \"enter\", or a letter or digit.\"\"\"\n    if not isinstance(key, str):\n        raise TypeError(\"engine.key_down() needs a key name in quotes, like \\\"space\\\", but it got \" + repr(key))\n    k = key.lower()\n    if k == \" \":\n        k = \"space\"\n    if k not in _KEYS and not (len(k) == 1 and k.isalnum()):\n        raise ValueError(\"engine.key_down() doesn't know the key \" + repr(key) +\n                         \". Use \\\"left\\\", \\\"right\\\", \\\"up\\\", \\\"down\\\", \\\"space\\\", \\\"enter\\\", or one letter or digit.\")\n    return k in _keys\n\n\ndef run(game):\n    \"\"\"Start the game. Put this on the last line of your program.\"\"\"\n    global _game\n    if isinstance(game, type):\n        raise TypeError(\"engine.run() needs an object, not a class. Write engine.run(\" +\n                        game.__name__ + \"()) with parentheses after the class name.\")\n    for name in (\"update\", \"draw\"):\n        if not callable(getattr(game, name, None)):\n            raise TypeError(\"engine.run() needs an object that has an update() method and a draw() method. \" +\n                            \"This \" + type(game).__name__ + \" object has no \" + name + \"() method.\")\n    _game = game\n\n\ndef _frame(keys):\n    # The compiler calls this 30 times a second.\n    global _commands\n    _keys.clear()\n    _keys.update(keys)\n    _commands = []\n    _game.update()\n    _game.draw()\n    return _commands\n";
+const LABS = {"play": {"code": "import engine\nimport random\n\nclass Rectangle:\n    def __init__(self, x, y, width, height, color):\n        self.x = x\n        self.y = y\n        self.width = width\n        self.height = height\n        self.color = color\n\n    def draw(self):\n        engine.rect(self.x, self.y, self.width, self.height, self.color)\n\n    def touches(self, other):\n        return (self.x < other.x + other.width and\n                self.x + self.width > other.x and\n                self.y < other.y + other.height and\n                self.y + self.height > other.y)\n\n\nclass Basket(Rectangle):\n    def __init__(self):\n        super().__init__(270, 270, 60, 20, \"blue\")\n\n    def update(self):\n        if engine.key_down(\"left\"):\n            self.x -= 12\n        if engine.key_down(\"right\"):\n            self.x += 12\n\n\nclass Apple(Rectangle):\n    def __init__(self, y):\n        super().__init__(random.randint(0, 580), y, 20, 20, \"red\")\n        self.speed = 3\n\n    def update(self):\n        self.y += self.speed\n\n    def back_to_top(self):\n        self.x = random.randint(0, 580)\n        self.y = 0\n\n\nclass Game:\n    def __init__(self):\n        self.basket = Basket()\n        self.apples = [Apple(0), Apple(-150)]\n        self.score = 0\n        self.game_over = False\n\n    def update(self):\n        if self.game_over:\n            return\n\n        self.basket.update()\n        for apple in self.apples:\n            apple.update()\n            if self.basket.touches(apple):\n                self.score += 1\n                apple.back_to_top()\n            elif apple.y > 300:\n                self.game_over = True\n\n    def draw(self):\n        self.basket.draw()\n        for apple in self.apples:\n            apple.draw()\n        engine.text(\"Score: \" + str(self.score), 10, 10)\n        if self.game_over:\n            engine.text(\"Game over\", 250, 130)\n\nengine.run(Game())\n", "nocode": true, "keys": "lr"}, "loop": {"code": "import engine\n\nclass Game:\n    def __init__(self):\n        self.x = 0\n\n    def update(self):\n        self.x += 3\n\n    def draw(self):\n        engine.rect(self.x, 270, 60, 20, \"blue\")\n\nengine.run(Game())\n", "keys": "", "ex": {"code": "class Game:\n    def __init__(self):\n        self.x = 0\n\n    def update(self):\n        self.x += 3\n\n    def draw(self):\n        engine.rect(self.x, 270, 60, 20, \"blue\")\n\nengine.run(Game())", "calls": [[5, 6], [8, 9], [11, 11]]}, "link": false}, "rect": {"code": "import engine\n\nclass Rectangle:\n    def __init__(self, x, y, width, height, color):\n        self.x = x\n        self.y = y\n        self.width = width\n        self.height = height\n        self.color = color\n\n    def draw(self):\n        engine.rect(self.x, self.y, self.width, self.height, self.color)\n\n\nclass Game:\n    def __init__(self):\n        self.basket = Rectangle(270, 270, 60, 20, \"blue\")\n\n    def update(self):\n        pass\n\n    def draw(self):\n        self.basket.draw()\n\nengine.run(Game())\n", "keys": "", "ex": {"code": "class Rectangle:\n    def __init__(self, x, y, width, height, color):\n        self.x = x\n        self.y = y\n        self.width = width\n        self.height = height\n        self.color = color\n\n    def draw(self):\n        engine.rect(self.x, self.y, self.width,\n                    self.height, self.color)", "calls": [[2, 7], [9, 11]]}, "link": false}, "rect2": {"code": "import engine\n\nclass Rectangle:\n    def __init__(self, x, y, width, height, color):\n        self.x = x\n        self.y = y\n        self.width = width\n        self.height = height\n        self.color = color\n\n    def draw(self):\n        engine.rect(self.x, self.y, self.width, self.height, self.color)\n\n\nclass Game:\n    def __init__(self):\n        self.basket = Rectangle(270, 270, 60, 20, \"blue\")\n\n    def update(self):\n        pass\n\n    def draw(self):\n        self.basket.draw()\n\nengine.run(Game())\n", "keys": "", "ex": {"code": "class Game:\n    def __init__(self):\n        self.basket = Rectangle(270, 270, 60, 20, \"blue\")\n\n    def update(self):\n        pass\n\n    def draw(self):\n        self.basket.draw()\n\nengine.run(Game())", "calls": [[3, 3], [6, 6], [9, 9]]}, "link": false}, "basket": {"code": "import engine\n\nclass Rectangle:\n    def __init__(self, x, y, width, height, color):\n        self.x = x\n        self.y = y\n        self.width = width\n        self.height = height\n        self.color = color\n\n    def draw(self):\n        engine.rect(self.x, self.y, self.width, self.height, self.color)\n\n\nclass Basket(Rectangle):\n    def __init__(self):\n        super().__init__(270, 270, 60, 20, \"blue\")\n\n    def update(self):\n        if engine.key_down(\"left\"):\n            self.x -= 12\n        if engine.key_down(\"right\"):\n            self.x += 12\n\n\nclass Game:\n    def __init__(self):\n        self.basket = Basket()\n\n    def update(self):\n        self.basket.update()\n\n    def draw(self):\n        self.basket.draw()\n\nengine.run(Game())\n", "keys": "lr", "ex": {"code": "class Basket(Rectangle):\n    def __init__(self):\n        super().__init__(270, 270, 60, 20, \"blue\")\n\n    def update(self):\n        if engine.key_down(\"left\"):\n            self.x -= 12\n        if engine.key_down(\"right\"):\n            self.x += 12\n\n\nclass Game:\n    def __init__(self):\n        self.basket = Basket()\n\n    def update(self):\n        self.basket.update()\n\n    def draw(self):\n        self.basket.draw()", "calls": [[3, 3], [5, 9], [17, 17]]}, "link": false}, "apple": {"code": "import engine\nimport random\n\nclass Rectangle:\n    def __init__(self, x, y, width, height, color):\n        self.x = x\n        self.y = y\n        self.width = width\n        self.height = height\n        self.color = color\n\n    def draw(self):\n        engine.rect(self.x, self.y, self.width, self.height, self.color)\n\n\nclass Basket(Rectangle):\n    def __init__(self):\n        super().__init__(270, 270, 60, 20, \"blue\")\n\n    def update(self):\n        if engine.key_down(\"left\"):\n            self.x -= 12\n        if engine.key_down(\"right\"):\n            self.x += 12\n\n\nclass Apple(Rectangle):\n    def __init__(self, y):\n        super().__init__(random.randint(0, 580), y, 20, 20, \"red\")\n        self.speed = 3\n\n    def update(self):\n        self.y += self.speed\n\n\nclass Game:\n    def __init__(self):\n        self.basket = Basket()\n        self.apple = Apple(0)\n\n    def update(self):\n        self.basket.update()\n        self.apple.update()\n\n    def draw(self):\n        self.basket.draw()\n        self.apple.draw()\n\nengine.run(Game())\n", "keys": "lr", "ex": {"code": "class Apple(Rectangle):\n    def __init__(self, y):\n        super().__init__(random.randint(0, 580), y,\n                         20, 20, \"red\")\n        self.speed = 3\n\n    def update(self):\n        self.y += self.speed\n\n\nclass Game:\n    def __init__(self):\n        self.basket = Basket()\n        self.apple = Apple(0)\n\n    def update(self):\n        self.basket.update()\n        self.apple.update()\n\n    def draw(self):\n        self.basket.draw()\n        self.apple.draw()", "calls": [[2, 4], [7, 8], [14, 14], [18, 18]]}, "link": false}, "list": {"code": "import engine\nimport random\n\nclass Rectangle:\n    def __init__(self, x, y, width, height, color):\n        self.x = x\n        self.y = y\n        self.width = width\n        self.height = height\n        self.color = color\n\n    def draw(self):\n        engine.rect(self.x, self.y, self.width, self.height, self.color)\n\n\nclass Basket(Rectangle):\n    def __init__(self):\n        super().__init__(270, 270, 60, 20, \"blue\")\n\n    def update(self):\n        if engine.key_down(\"left\"):\n            self.x -= 12\n        if engine.key_down(\"right\"):\n            self.x += 12\n\n\nclass Apple(Rectangle):\n    def __init__(self, y):\n        super().__init__(random.randint(0, 580), y, 20, 20, \"red\")\n        self.speed = 3\n\n    def update(self):\n        self.y += self.speed\n\n\nclass Game:\n    def __init__(self):\n        self.basket = Basket()\n        self.apples = [Apple(0), Apple(-150)]\n\n    def update(self):\n        self.basket.update()\n        for apple in self.apples:\n            apple.update()\n\n    def draw(self):\n        self.basket.draw()\n        for apple in self.apples:\n            apple.draw()\n\nengine.run(Game())\n", "keys": "lr", "ex": {"code": "class Game:\n    def __init__(self):\n        self.basket = Basket()\n        self.apples = [Apple(0), Apple(-150)]\n\n    def update(self):\n        self.basket.update()\n        for apple in self.apples:\n            apple.update()\n\n    def draw(self):\n        self.basket.draw()\n        for apple in self.apples:\n            apple.draw()", "calls": [[4, 4], [8, 9], [13, 14]]}, "link": false}, "catch": {"code": "import engine\nimport random\n\nclass Rectangle:\n    def __init__(self, x, y, width, height, color):\n        self.x = x\n        self.y = y\n        self.width = width\n        self.height = height\n        self.color = color\n\n    def draw(self):\n        engine.rect(self.x, self.y, self.width, self.height, self.color)\n\n    def touches(self, other):\n        return (self.x < other.x + other.width and\n                self.x + self.width > other.x and\n                self.y < other.y + other.height and\n                self.y + self.height > other.y)\n\n\nclass Basket(Rectangle):\n    def __init__(self):\n        super().__init__(270, 270, 60, 20, \"blue\")\n\n    def update(self):\n        if engine.key_down(\"left\"):\n            self.x -= 12\n        if engine.key_down(\"right\"):\n            self.x += 12\n\n\nclass Apple(Rectangle):\n    def __init__(self, y):\n        super().__init__(random.randint(0, 580), y, 20, 20, \"red\")\n        self.speed = 3\n\n    def update(self):\n        self.y += self.speed\n\n    def back_to_top(self):\n        self.x = random.randint(0, 580)\n        self.y = 0\n\n\nclass Game:\n    def __init__(self):\n        self.basket = Basket()\n        self.apples = [Apple(0), Apple(-150)]\n        self.score = 0\n\n    def update(self):\n        self.basket.update()\n        for apple in self.apples:\n            apple.update()\n            if self.basket.touches(apple):\n                self.score += 1\n                apple.back_to_top()\n\n    def draw(self):\n        self.basket.draw()\n        for apple in self.apples:\n            apple.draw()\n        engine.text(\"Score: \" + str(self.score), 10, 10)\n\nengine.run(Game())\n", "keys": "lr", "ex": {"code": "class Apple(Rectangle):\n    ...\n    def back_to_top(self):\n        self.x = random.randint(0, 580)\n        self.y = 0\n\n\nclass Game:\n    ...\n    def update(self):\n        self.basket.update()\n        for apple in self.apples:\n            apple.update()\n            if self.basket.touches(apple):\n                self.score += 1\n                apple.back_to_top()\n\n    def draw(self):\n        self.basket.draw()\n        for apple in self.apples:\n            apple.draw()\n        engine.text(\"Score: \" + str(self.score), 10, 10)", "calls": [[3, 5], [14, 16], [22, 22]]}, "link": false}, "over": {"code": "import engine\nimport random\n\nclass Rectangle:\n    def __init__(self, x, y, width, height, color):\n        self.x = x\n        self.y = y\n        self.width = width\n        self.height = height\n        self.color = color\n\n    def draw(self):\n        engine.rect(self.x, self.y, self.width, self.height, self.color)\n\n    def touches(self, other):\n        return (self.x < other.x + other.width and\n                self.x + self.width > other.x and\n                self.y < other.y + other.height and\n                self.y + self.height > other.y)\n\n\nclass Basket(Rectangle):\n    def __init__(self):\n        super().__init__(270, 270, 60, 20, \"blue\")\n\n    def update(self):\n        if engine.key_down(\"left\"):\n            self.x -= 12\n        if engine.key_down(\"right\"):\n            self.x += 12\n\n\nclass Apple(Rectangle):\n    def __init__(self, y):\n        super().__init__(random.randint(0, 580), y, 20, 20, \"red\")\n        self.speed = 3\n\n    def update(self):\n        self.y += self.speed\n\n    def back_to_top(self):\n        self.x = random.randint(0, 580)\n        self.y = 0\n\n\nclass Game:\n    def __init__(self):\n        self.basket = Basket()\n        self.apples = [Apple(0), Apple(-150)]\n        self.score = 0\n        self.game_over = False\n\n    def update(self):\n        if self.game_over:\n            return\n\n        self.basket.update()\n        for apple in self.apples:\n            apple.update()\n            if self.basket.touches(apple):\n                self.score += 1\n                apple.back_to_top()\n            elif apple.y > 300:\n                self.game_over = True\n\n    def draw(self):\n        self.basket.draw()\n        for apple in self.apples:\n            apple.draw()\n        engine.text(\"Score: \" + str(self.score), 10, 10)\n        if self.game_over:\n            engine.text(\"Game over\", 250, 130)\n\nengine.run(Game())\n", "keys": "lr", "ex": {"code": "class Game:\n    def __init__(self):\n        ⋮\n        self.game_over = False\n\n    def update(self):\n        if self.game_over:\n            return\n\n        self.basket.update()\n        for apple in self.apples:\n            apple.update()\n            if self.basket.touches(apple):\n                self.score += 1\n                apple.back_to_top()\n            elif apple.y > 300:\n                self.game_over = True\n    ...\n        if self.game_over:\n            engine.text(\"Game over\", 250, 130)", "calls": [[7, 8], [16, 17], [19, 20]]}, "link": false}, "jump": {"code": "import engine\n\nGROUND = 250\n\nclass Box:\n    def __init__(self):\n        self.x = 280\n        self.y = GROUND - 40\n        self.speed_y = 0\n\n    def jump(self):\n        if self.y == GROUND - 40:\n            self.speed_y = -15\n\n    def update(self):\n        self.speed_y += 1\n        self.y += self.speed_y\n        if self.y > GROUND - 40:\n            self.y = GROUND - 40\n            self.speed_y = 0\n\n    def draw(self):\n        engine.rect(self.x, self.y, 40, 40, \"blue\")\n\n\nclass Game:\n    def __init__(self):\n        self.box = Box()\n\n    def update(self):\n        if engine.key_down(\"space\"):\n            self.box.jump()\n        self.box.update()\n\n    def draw(self):\n        engine.rect(0, GROUND, 600, 2, \"black\")\n        self.box.draw()\n        engine.text(\"speed_y: \" + str(self.box.speed_y), 10, 10)\n\nengine.run(Game())\n", "keys": "space", "ex": {"code": "class Box:\n    def __init__(self):\n        self.x = 280\n        self.y = GROUND - 40\n        self.speed_y = 0\n\n    def jump(self):\n        if self.y == GROUND - 40:\n            self.speed_y = -15\n\n    def update(self):\n        self.speed_y += 1\n        self.y += self.speed_y\n        if self.y > GROUND - 40:\n            self.y = GROUND - 40\n            self.speed_y = 0", "calls": [[4, 4], [5, 5], [8, 9], [12, 16]]}, "link": false}};
+const MISTAKES = [{"name": "Nothing moves", "code": "import engine\n\nclass Box:\n    def __init__(self):\n        self.x = 0\n\n    def update(self):\n        self.x += 3\n\n    def draw(self):\n        engine.rect(self.x, 130, 40, 40, \"blue\")\n\n\nclass Game:\n    def __init__(self):\n        self.box = Box()\n\n    def update(self):\n        pass\n\n    def draw(self):\n        self.box.draw()\n\nengine.run(Game())\n", "fix": {"code": "import engine\n\nclass Box:\n    def __init__(self):\n        self.x = 0\n\n    def update(self):\n        self.x += 3\n\n    def draw(self):\n        engine.rect(self.x, 130, 40, 40, \"blue\")\n\n\nclass Game:\n    def __init__(self):\n        self.box = Box()\n\n    def update(self):\n        self.box.update()\n\n    def draw(self):\n        self.box.draw()\n\nengine.run(Game())\n", "hl": [19], "why": "The box has an <code>update<\/code> method, but nothing ever calls it. The engine only calls the game's <code>update<\/code>, so the game has to call <code>self.box.update()<\/code>."}}, {"name": "It keeps starting over", "code": "import engine\n\nclass Box:\n    def __init__(self):\n        self.x = 0\n\n    def update(self):\n        self.x += 3\n\n    def draw(self):\n        engine.rect(self.x, 130, 40, 40, \"blue\")\n\n\nclass Game:\n    def update(self):\n        self.box = Box()\n        self.box.update()\n\n    def draw(self):\n        self.box.draw()\n\nengine.run(Game())\n", "fix": {"code": "import engine\n\nclass Box:\n    def __init__(self):\n        self.x = 0\n\n    def update(self):\n        self.x += 3\n\n    def draw(self):\n        engine.rect(self.x, 130, 40, 40, \"blue\")\n\n\nclass Game:\n    def __init__(self):\n        self.box = Box()\n\n    def update(self):\n        self.box.update()\n\n    def draw(self):\n        self.box.draw()\n\nengine.run(Game())\n", "hl": [15, 16], "why": "<code>update<\/code> makes a new box every frame, and a new box always starts with <code>x<\/code> at 0, so it keeps jumping back to the start. Make the box once in <code>__init__<\/code> instead."}}, {"name": "Forgetting super()", "code": "import engine\n\nclass Rectangle:\n    def __init__(self, x, y, width, height, color):\n        self.x = x\n        self.y = y\n        self.width = width\n        self.height = height\n        self.color = color\n\n    def draw(self):\n        engine.rect(self.x, self.y, self.width, self.height, self.color)\n\n\nclass Apple(Rectangle):\n    def __init__(self):\n        self.speed = 4\n\n    def update(self):\n        self.y += self.speed\n\n\nclass Game:\n    def __init__(self):\n        self.apple = Apple()\n\n    def update(self):\n        self.apple.update()\n\n    def draw(self):\n        self.apple.draw()\n\nengine.run(Game())\n", "fix": {"code": "import engine\n\nclass Rectangle:\n    def __init__(self, x, y, width, height, color):\n        self.x = x\n        self.y = y\n        self.width = width\n        self.height = height\n        self.color = color\n\n    def draw(self):\n        engine.rect(self.x, self.y, self.width, self.height, self.color)\n\n\nclass Apple(Rectangle):\n    def __init__(self):\n        super().__init__(290, 0, 20, 20, \"red\")\n        self.speed = 4\n\n    def update(self):\n        self.y += self.speed\n\n\nclass Game:\n    def __init__(self):\n        self.apple = Apple()\n\n    def update(self):\n        self.apple.update()\n\n    def draw(self):\n        self.apple.draw()\n\nengine.run(Game())\n", "hl": [17], "why": "<code>Apple<\/code>'s constructor overrides <code>Rectangle<\/code>'s, so <code>Rectangle<\/code>'s constructor never runs and <code>self.y<\/code> never gets saved. Calling <code>super().__init__(...)<\/code> runs it."}}, {"name": "Game or Game()", "code": "import engine\n\nclass Box:\n    def __init__(self):\n        self.x = 0\n\n    def update(self):\n        self.x += 3\n\n    def draw(self):\n        engine.rect(self.x, 130, 40, 40, \"blue\")\n\n\nclass Game:\n    def __init__(self):\n        self.box = Box()\n\n    def update(self):\n        self.box.update()\n\n    def draw(self):\n        self.box.draw()\n\nengine.run(Game)\n", "fix": {"code": "import engine\n\nclass Box:\n    def __init__(self):\n        self.x = 0\n\n    def update(self):\n        self.x += 3\n\n    def draw(self):\n        engine.rect(self.x, 130, 40, 40, \"blue\")\n\n\nclass Game:\n    def __init__(self):\n        self.box = Box()\n\n    def update(self):\n        self.box.update()\n\n    def draw(self):\n        self.box.draw()\n\nengine.run(Game())\n", "hl": [24], "why": "<code>Game<\/code> is the class itself, while <code>Game()<\/code> makes an object from it. <code>engine.run<\/code> needs an object, so it needs the parentheses."}}];
+const FINAL_LINK = "https://paaras.github.io/python_i/compiler.html#cAAipuYn8E9QEBd-wEcIphcRdeIrFKo53pb_NleE782f0M0KJ2e2HVoMANfSfacRVcsW-1oQHn62KMQOKizOmtDWdE8ENsPjmP-ZQKKFPoy_OzMLP3ehvyN199sUaid2RubzVMawORNIxU_2dbrFSOAeaHZTc-LKuGWA4KEHgjAPkE0zxgUoia3CFuXnJw0YOyKCVodc9mGi_gy9lyuHFDTnXOOSyfoVFyfz4gu6Hzz19pgIsZvGB_fTNJ2DeeswzGqjf3XqliHvuKM_gWKFfaW7ao5vfdOVthM39BBaHGr81I3jd46WlPR-FR-SRZ0VHQX4VjsiidAPNzAEg9HSOQtySaj_iuK33D_7JX0ycsMB-uRAiAG3VHDiuMP7YFBTuG4Ji1fWvI6ehyKqA3CjMW9xECocsCeZU_bqO2tJHeKEDZkuX-om5l2mwbmB2j2yeA7SYQ2qXkOwAKwkOMXSmMWhJzlW8dPCI_kjjiyaDQSkpOlnO";
+/* ---------- helpers ---------- */
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const $ = id => document.getElementById(id);
+function hl(text){
+  let html = '';
+  CodeMirror.runMode(text, 'python', (tok, style) => { html += style ? `<span class="cm-${style.split(' ').join(' cm-')}">${esc(tok)}</span>` : esc(tok); });
+  return html;
+}
+document.querySelectorAll('pre[data-py]').forEach(p => { p.innerHTML = hl(p.textContent); });
+
+/* ---------- Python (Pyodide), loaded once for the whole deck ---------- */
+const PYBASE = 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/';
+const PY_HELPERS = `
+import sys, io, json, traceback, builtins, linecache
+LIB = '/pylib'
+if LIB not in sys.path: sys.path.append(LIB)
+_real_input = builtins.input
+
+def _fmt(e):
+    te = traceback.TracebackException(type(e), e, e.__traceback__, compact=True)
+    te.stack = traceback.StackSummary.from_list([f for f in te.stack if f.filename == 'main.py'])
+    line = te.stack[-1].lineno if len(te.stack) else None
+    if isinstance(e, SyntaxError) and e.filename == 'main.py': line = e.lineno
+    return ''.join(te.format()), line
+
+def _no_input(*a):
+    raise RuntimeError("input() isn't used in these examples. Use engine.key_down() to read the keyboard.")
+
+def _guard(fn):
+    out = io.StringIO()
+    o, e = sys.stdout, sys.stderr
+    sys.stdout = sys.stderr = out
+    builtins.input = _no_input
+    res = {'err': None, 'line': None}
+    try:
+        res['val'] = fn()
+    except SystemExit:
+        res['exit'] = True
+    except BaseException as ex:
+        res['err'], res['line'] = _fmt(ex)
+    finally:
+        sys.stdout, sys.stderr = o, e
+        builtins.input = _real_input
+    res['out'] = out.getvalue()
+    return res
+
+def _start(src):
+    sys.modules.pop('engine', None)
+    linecache.cache['main.py'] = (len(src), None, src.splitlines(True), 'main.py')
+    def go():
+        exec(compile(src, 'main.py', 'exec'), {'__name__': '__main__', '__builtins__': builtins})
+    res = _guard(go)
+    eng = sys.modules.get('engine')
+    res['game'] = res['err'] is None and eng is not None and getattr(eng, '_game', None) is not None
+    return json.dumps(res)
+
+def _tick(keys):
+    return json.dumps(_guard(lambda: sys.modules['engine']._frame(json.loads(keys))))
+`;
+let py = null, pyP = null;
+function pyStat(t){ $('pystat').textContent = 'Python: ' + t; }
+function loadPy(){
+  if (pyP) return pyP;
+  pyStat('loading');
+  pyP = new Promise((res, rej) => { const s = document.createElement('script'); s.src = PYBASE + 'pyodide.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s); })
+    .then(() => loadPyodide({ indexURL: PYBASE }))
+    .then(p => { p.FS.mkdirTree('/pylib'); p.FS.writeFile('/pylib/engine.py', ENGINE); p.runPython(PY_HELPERS); py = p; pyStat('ready'); })
+    .catch(e => { pyP = null; pyStat('could not load, check your connection'); throw e; });
+  return pyP;
+}
+
+/* ---------- the game screen ---------- */
+const GW = 600, GH = 300;
+function sizeScreen(can){
+  const r = Math.min(3, Math.max(1, window.devicePixelRatio || 1));
+  if (can.width !== Math.round(GW * r)) { can.width = Math.round(GW * r); can.height = Math.round(GH * r); }
+  const g = can.getContext('2d'); g.setTransform(can.width / GW, 0, 0, can.height / GH, 0, 0);
+  return g;
+}
+function drawCmds(can, cmds, onBad){
+  const g = sizeScreen(can);
+  const color = c => { if (!CSS.supports('color', c)) { if (onBad) onBad(c); c = '#000'; } g.fillStyle = c; };
+  g.fillStyle = '#fff'; g.fillRect(0, 0, GW, GH);
+  for (const c of cmds) {
+    if (c[0] === 'rect') { color(c[5]); g.fillRect(c[1], c[2], c[3], c[4]); }
+    else if (c[0] === 'text') { color(c[4]); g.font = `${c[5]}px "Helvetica Neue", Helvetica, Arial, sans-serif`; g.textBaseline = 'top'; g.fillText(c[1], c[2], c[3]); }
+  }
+}
+function drawIdle(can, msg){
+  const g = sizeScreen(can);
+  g.fillStyle = '#fff'; g.fillRect(0, 0, GW, GH);
+  g.fillStyle = '#9aa1ac'; g.font = '20px system-ui, sans-serif'; g.textBaseline = 'middle'; g.textAlign = 'center';
+  g.fillText(msg, GW / 2, GH / 2); g.textAlign = 'left';
+}
+const KEYMAP = { ' ': 'space', Spacebar: 'space', ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down', Enter: 'enter' };
+const keyName = e => KEYMAP[e.key] || (e.key && e.key.length === 1 && /[a-z0-9]/i.test(e.key) ? e.key.toLowerCase() : null);
+const TRI = r => `<svg viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(${r}deg)"><path d="M7 4.5v15l12.5-7.5z"/></svg>`;
+
+/* one game runs at a time: `running` is the lab (or the demo on the last slide) that owns the loop */
+let running = null;
+function stopRunning(){ if (running) running.stop(); }
+
+/* A lab: an editor, a Run button and a game screen.
+   o.code       the program
+   o.hl         line numbers (1-based) to mark as new on this slide
+   o.nocode     hide the editor (slide 2)
+   o.keys       which on-screen keys a phone needs: 'lr' (left, right), 'space', or both
+   o.fix        { code, why } adds a "Show fix" button */
+function gameLab(host, o){
+  if (typeof host === 'string') host = $(host);
+  const keys = o.keys || '';
+  host.innerHTML = `<div class="lab${o.nocode ? ' nocode' : ''}">
+    ${o.nocode ? '' : `<div class="main">${o.ex ? '<div class="ex"></div>' : ''}<div class="ed"${o.ex ? ' hidden' : ''}></div></div>`}
+    <div class="side">
+      <div class="sidenotes"></div>
+      <div class="why" hidden></div>
+      <div class="controls"><button class="btn primary run">&#9654; Run</button>${o.nocode ? '' : '<button class="btn reset">Reset the code</button>'}${o.fix ? '<button class="btn fix">Show fix</button>' : ''}${o.ex ? '<button class="btn edit">Edit the code</button>' : ''}${o.link ? `<a class="btn" target="_blank" rel="noopener" href="${FINAL_LINK}">Open in the compiler</a>` : ''}<span class="ghint"></span></div>
+      <canvas class="screen" width="600" height="300" tabindex="0" aria-label="Game screen"></canvas>
+      <div class="pad"${keys ? '' : ' hidden'}>
+        ${keys.includes('lr') ? `<button data-k="left" aria-label="Left">${TRI(180)}</button><button data-k="right" aria-label="Right">${TRI(0)}</button>` : ''}
+        ${keys.includes('space') ? '<button data-k="space" class="wide">space</button>' : ''}
+      </div>
+      <pre class="out" hidden></pre>
+    </div></div>`;
+  const q = s => host.querySelector(s);
+  const can = q('.screen'), out = q('.out'), runBtn = q('.run'), hint = q('.ghint'), why = q('.why');
+  const held = new Set(), tapped = new Set(), bad = new Set();
+  let timer = 0, cm = null, errLine = null, curCode = o.code, marks = [];
+  const lab = { stop, host };
+  const after = host.parentElement.querySelector(':scope > .after');
+  if (after) q('.sidenotes').appendChild(after);
+
+  if (!o.nocode) {
+    cm = CodeMirror(q('.ed'), { value: o.code, mode: 'python', lineNumbers: true, indentUnit: 4, tabSize: 4, viewportMargin: Infinity,
+      extraKeys: { Tab: c => c.somethingSelected() ? c.indentSelection('add') : c.replaceSelection('    ', 'end'), 'Shift-Tab': c => c.indentSelection('subtract') } });
+    mark(o.hl);
+    cm.on('change', clearErr);
+    { const labEl = host.querySelector('.lab'); labEl.classList.add('hasex'); labEl.style.setProperty('--n', Math.max(40, ...(o.ex ? o.ex.code : o.code).split('\n').map(l => l.length)) + (o.ex ? 0 : 5)); }
+    if (o.ex) {
+      const exEl = q('.ex'), edEl = q('.ed'), eb = q('.edit');
+      const raw = o.ex.code.split('\n'), rows = hl(o.ex.code).split('\n');
+      q('.reset').hidden = true;
+      { const intro = host.previousElementSibling; const labEl = host.querySelector('.lab'); if (intro && intro.tagName === 'P') { intro.classList.add('intro'); const txt = document.createElement('div'); txt.className = 'txt'; txt.append(intro, q('.sidenotes')); labEl.insertBefore(txt, labEl.firstChild); labEl.classList.add('cols'); } }
+      exEl.innerHTML = raw.map((l, i) => {
+        const c = o.ex.calls.findIndex(r => i + 1 >= r[0] && i + 1 <= r[1]);
+        const gap = l.trim() === '...';
+        return `<div class="xl${c >= 0 ? ' on' : ''}${gap ? ' gap' : ''}" data-c="${c}">${c >= 0 && o.ex.calls[c][0] === i + 1 ? `<b class="bd">${c + 1}</b>` : ''}<span>${gap ? '        &#8942;' : rows[i] || ' '}</span></div>`;
+      }).join('');
+      eb.onclick = () => { const open = edEl.hidden; edEl.hidden = !open; exEl.hidden = open; eb.textContent = open ? 'Hide the full code' : 'Edit the code'; q('.reset').hidden = !open; if (open) cm.refresh(); place(); };
+      const notes = host.parentElement.querySelectorAll(':scope > .after .calls li');
+      notes.forEach((li, c) => { const set = on => exEl.querySelectorAll(`.xl[data-c="${c}"]`).forEach(x => x.classList.toggle('hot', on)); li.onmouseenter = () => set(true); li.onmouseleave = () => set(false); });
+    }
+    q('.reset').onclick = () => { stop(); cm.setValue(curCode); mark(curCode === o.code ? o.hl : o.fix && o.fix.hl); print('', true); drawIdle(can, 'Press Run'); };
+    if (o.fix) q('.fix').onclick = () => {
+      stop(); curCode = o.fix.code; cm.setValue(curCode); mark(o.fix.hl);
+      why.innerHTML = o.fix.why; why.hidden = false; print('', true); drawIdle(can, 'Press Run');
+    };
+  }
+  function mark(lines){
+    for (const m of marks) cm.removeLineClass(m, 'background', 'newline');
+    marks = (lines || []).map(n => cm.addLineClass(n - 1, 'background', 'newline'));
+  }
+  const fit = () => { const sl = host.closest('.slide'), c = host.querySelector('.screen'); if (!sl || !c) return; c.style.maxWidth = ''; let w = c.offsetWidth; while (sl.scrollHeight > sl.clientHeight + 1 && w > 230) { w -= 20; c.style.maxWidth = w + 'px'; } };
+  const place = () => { const L = host.querySelector('.lab.cols'); if (!L) return; if (innerWidth < 901) { L.style.gridTemplateColumns = ''; return; } { const ex = L.querySelector('.ex'), n = +L.style.getPropertyValue('--n') || 40; const cw = Math.ceil(n * parseFloat(getComputedStyle(ex).fontSize) * .602 + 82); const tw = Math.max(400, Math.min(640, L.clientWidth - 60 - cw)); L.style.gridTemplateColumns = tw + 'px minmax(0,' + cw + 'px)'; } L.classList.remove('gl'); L.classList.add('gl'); fit(); };
+  addEventListener('resize', place);
+  lab.show = () => {            // called when the slide appears
+    place();
+    if (cm) { cm.refresh(); if (o.hl && o.hl.length && !lab.scrolled) { lab.scrolled = true; let at = o.hl[0]; if (o.at) { const k = cm.getValue().split('\n').findIndex(l => l.includes(o.at)); if (k >= 0) at = k + 1; } const first = Math.max(0, at - 3); cm.scrollTo(null, cm.heightAtLine(first, 'local')); } }
+    if (!timer) drawIdle(can, 'Press Run');
+  };
+  function clearErr(){ if (errLine != null && cm) { cm.removeLineClass(errLine, 'background', 'errline'); errLine = null; } }
+  function print(text, reset, isErr){
+    if (reset) out.innerHTML = '';
+    if (text) { const s = document.createElement('span'); if (isErr) s.className = 'e'; s.textContent = text; out.appendChild(s); if (out.textContent.length > 20000) out.textContent = out.textContent.slice(-10000); out.scrollTop = out.scrollHeight; }
+    out.hidden = !out.textContent;
+  }
+  function fail(res){
+    print((out.textContent && !out.textContent.endsWith('\n') ? '\n' : '') + res.err, false, true);
+    if (cm && res.line && res.line <= cm.lineCount()) { errLine = cm.addLineClass(res.line - 1, 'background', 'errline'); cm.scrollIntoView({ line: res.line - 1, ch: 0 }, 60); }
+  }
+  function setHint(){ hint.textContent = timer && document.activeElement !== can ? 'Click the game to use the keyboard' : ''; }
+  function setBtn(){}
+  function stop(){
+    if (timer) { clearInterval(timer); timer = 0; }
+    if (running === lab) running = null;
+    held.clear(); tapped.clear();
+    host.querySelectorAll('.pad .on').forEach(b => b.classList.remove('on'));
+    if (document.activeElement === can) can.blur();
+    setBtn(); setHint();
+  }
+  function tick(){
+    if (dragX != null) { const r = lastCmds.find(c => c[0] === 'rect' && c[5] === 'blue'); held.delete('left'); held.delete('right'); if (r) { const cx = r[1] + r[3] / 2; if (dragX < cx - 8) held.add('left'); else if (dragX > cx + 8) held.add('right'); } }
+    const keysNow = [...new Set([...held, ...tapped])]; tapped.clear();
+    const res = JSON.parse(py.globals.get('_tick')(JSON.stringify(keysNow)));
+    if (res.out) print(res.out);
+    if (res.val) lastCmds = res.val;
+    if (res.val) drawCmds(can, res.val, c => { if (!bad.has(c)) { bad.add(c); print(`"${c}" is not a color the screen knows, so it used black\n`, false, true); } });
+    if (res.err) { stop(); fail(res); }
+    else if (res.exit) stop();
+  }
+  async function run(){
+    if (timer) stop();
+    stopRunning(); clearErr(); print('', true); bad.clear();
+    runBtn.disabled = true;
+    try { await loadPy(); } catch (e) { runBtn.disabled = false; print("Python couldn't load. Check your connection and press Run again.", true, true); return; }
+    runBtn.disabled = false;
+    const res = JSON.parse(py.globals.get('_start')(cm ? cm.getValue() : o.code));
+    if (res.out) print(res.out);
+    if (res.err) { fail(res); return; }
+    if (!res.game) { if (!res.out) print('The program ended without calling engine.run()', false); return; }
+    running = lab;
+    drawCmds(can, []);
+    timer = setInterval(tick, 1000 / 30);
+    setBtn();
+    can.focus({ preventScroll: true });
+    setHint();
+  }
+  runBtn.onclick = run;
+  let dragX = null, lastCmds = [];
+  const send = (k, d) => { if (!timer) return; if (d) { held.add(k); tapped.add(k); } else held.delete(k); };
+  can.addEventListener('keydown', e => { if (!timer || e.ctrlKey || e.metaKey || e.altKey) return; const k = keyName(e); if (!k) return; e.preventDefault(); if (!e.repeat) send(k, true); });
+  can.addEventListener('keyup', e => { const k = keyName(e); if (k) send(k, false); });
+  can.addEventListener('blur', () => { held.clear(); setHint(); });
+  can.addEventListener('focus', setHint);
+  const gx = e => { const b = can.getBoundingClientRect(); return (e.clientX - b.left) / b.width * 600; };
+  can.addEventListener('pointerdown', e => { if (!timer) return; e.preventDefault(); can.focus({ preventScroll: true }); if (keys.includes('lr')) { dragX = gx(e); try { can.setPointerCapture(e.pointerId); } catch (_) {} } else send('space', true); });
+  can.addEventListener('pointermove', e => { if (dragX != null) dragX = gx(e); });
+  for (const ev of ['pointerup', 'pointercancel']) can.addEventListener(ev, () => { if (dragX != null) { dragX = null; held.delete('left'); held.delete('right'); } send('space', false); });
+  can.addEventListener('pointerleave', () => send('space', false));
+  can.addEventListener('contextmenu', e => e.preventDefault());
+  host.querySelectorAll('.pad button').forEach(b => {
+    const up = () => { if (b.classList.contains('on')) { b.classList.remove('on'); send(b.dataset.k, false); } };
+    b.addEventListener('pointerdown', e => { e.preventDefault(); if (!timer) return; b.classList.add('on'); send(b.dataset.k, true); });
+    for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, up);
+    b.addEventListener('contextmenu', e => e.preventDefault());
+  });
+  drawIdle(can, 'Press Run');
+  (host.closest('.slide').labs = host.closest('.slide').labs || []).push(lab);
+  return lab;
+}
+
+/* ---------- the labs ---------- */
+for (const k in LABS) gameLab('lab_' + k, LABS[k]);
+
+/* ---------- slide 5: drag the rectangle ---------- */
+function svgPoint(svg, e){ const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; return p.matrixTransform(svg.getScreenCTM().inverse()); }
+(function(){
+  const svg = $('s5svg'), r = $('s5r');
+  let x = 270, y = 150, grab = null;
+  function draw(){
+    r.setAttribute('x', x); r.setAttribute('y', y);
+    $('s5c').setAttribute('cx', x); $('s5c').setAttribute('cy', y);
+    const lx = $('s5lx'), ly = $('s5ly');
+    lx.setAttribute('x1', 0); lx.setAttribute('y1', y); lx.setAttribute('x2', x); lx.setAttribute('y2', y);
+    ly.setAttribute('x1', x); ly.setAttribute('y1', 0); ly.setAttribute('x2', x); ly.setAttribute('y2', y);
+    const tx = $('s5tx'), ty = $('s5ty');
+    tx.textContent = 'x ' + x; tx.setAttribute('x', Math.max(4, x / 2 - 20)); tx.setAttribute('y', y < 24 ? y + 20 : y - 7);
+    ty.textContent = 'y ' + y; ty.setAttribute('x', x > 530 ? x - 62 : x + 8); ty.setAttribute('y', Math.max(18, y / 2 + 6));
+    tx.style.display = x < 60 ? 'none' : ''; ty.style.display = y < 34 ? 'none' : '';
+    $('s5read').innerHTML = `engine.rect(<b>${x}</b>, <b>${y}</b>, 60, 20, "blue")`;
+  }
+  svg.addEventListener('pointerdown', e => { const p = svgPoint(svg, e); grab = { dx: Math.min(60, Math.max(0, p.x - x)), dy: Math.min(20, Math.max(0, p.y - y)) }; if (p.x < x || p.x > x + 60 || p.y < y || p.y > y + 20) grab = { dx: 30, dy: 10 }; svg.setPointerCapture(e.pointerId); svg.style.cursor = 'grabbing'; move(e); });
+  function move(e){ if (!grab) return; const p = svgPoint(svg, e); x = Math.round(Math.max(0, Math.min(540, p.x - grab.dx))); y = Math.round(Math.max(0, Math.min(280, p.y - grab.dy))); draw(); }
+  svg.addEventListener('pointermove', move);
+  for (const ev of ['pointerup', 'pointercancel']) svg.addEventListener(ev, () => { grab = null; svg.style.cursor = 'grab'; });
+  draw();
+})();
+
+/* ---------- slide 11: drag the apple onto the basket ---------- */
+(function(){
+  const svg = $('s11svg'), a = $('s11a'), b = { x: 240, y: 160, width: 120, height: 40 };
+  const me = { x: 90, y: 50, width: 40, height: 40 };
+  let grab = null;
+  const rows = [
+    ['self.x < other.x + other.width', "basket's left edge is to the left of the apple's right edge", () => b.x < me.x + me.width],
+    ['self.x + self.width > other.x', "basket's right edge is to the right of the apple's left edge", () => b.x + b.width > me.x],
+    ['self.y < other.y + other.height', "basket's top edge is above the apple's bottom edge", () => b.y < me.y + me.height],
+    ['self.y + self.height > other.y', "basket's bottom edge is below the apple's top edge", () => b.y + b.height > me.y]
+  ];
+  function draw(){
+    a.setAttribute('x', me.x); a.setAttribute('y', me.y);
+    const res = rows.map(r => r[2]()), all = res.every(Boolean);
+    $('s11checks').innerHTML = rows.map((r, i) => `<li class="${res[i] ? 'yes' : 'no'}"><span class="m">${res[i] ? '&#10003;' : '&#10007;'}</span><span><code>${esc(r[0])}</code><small>${r[1]}</small></span></li>`).join('') +
+      `<li class="${all ? 'yes' : 'no'}"><span class="m">${all ? '&#10003;' : '&#10007;'}</span><span>basket.touches(apple) is ${all ? 'True' : 'False'}</span></li>`;
+    $('s11b').setAttribute('stroke', all ? '#1e7e34' : 'none'); $('s11b').setAttribute('stroke-width', 5);
+  }
+  a.addEventListener('pointerdown', e => { const p = svgPoint(svg, e); grab = { dx: p.x - me.x, dy: p.y - me.y }; a.setPointerCapture(e.pointerId); a.style.cursor = 'grabbing'; e.preventDefault(); });
+  a.addEventListener('pointermove', e => { if (!grab) return; const p = svgPoint(svg, e); me.x = Math.round(Math.max(0, Math.min(560, p.x - grab.dx))); me.y = Math.round(Math.max(0, Math.min(260, p.y - grab.dy))); draw(); });
+  for (const ev of ['pointerup', 'pointercancel']) a.addEventListener(ev, () => { grab = null; a.style.cursor = 'grab'; });
+  draw();
+})();
+
+/* ---------- slide 18: click a class ---------- */
+(function(){
+  const D = {
+    Game: ['Game', 'self.basket<br>self.apples<br>self.score<br>self.game_over', 'update()<br>draw()', "Keeps track of the basket, the apples and the score"],
+    Rectangle: ['Rectangle', 'x, y, width, height, color', 'draw()<br>touches(other)', "A rectangle drawn on the screen"],
+    Basket: ['Basket(Rectangle)', 'everything from Rectangle', 'everything from Rectangle<br>update()', "The rectangle you move with the arrow keys"],
+    Apple: ['Apple(Rectangle)', 'everything from Rectangle<br>speed', 'everything from Rectangle<br>update()<br>back_to_top()', "A rectangle that falls"]
+  };
+  const pick = c => {
+    document.querySelectorAll('#s18svg .cls').forEach(g => g.classList.toggle('on', g.dataset.c === c));
+    const d = D[c];
+    $('s18detail').innerHTML = `<h3>${d[0]}</h3>${d[3] ? `<p>${d[3]}</p>` : ''}<span class="k">Attributes</span><code>${d[1]}</code><span class="k">Methods</span><code>${d[2]}</code>`;
+  };
+  document.querySelectorAll('#s18svg .cls').forEach(g => g.addEventListener('click', () => pick(g.dataset.c)));
+  pick('Game');
+})();
+
+/* ---------- slide 21: common mistakes ---------- */
+(function(){
+  const tabs = $('s21tabs');
+  MISTAKES.forEach((m, i) => {
+    const b = document.createElement('button'); b.className = 'tab'; b.textContent = m.name;
+    b.onclick = () => pick(i); tabs.appendChild(b);
+  });
+  function pick(i){
+    stopRunning();
+    [...tabs.children].forEach((b, k) => b.classList.toggle('on', k === i));
+    const slide = $('s21lab').closest('.slide'); slide.labs = [];
+    const lab = gameLab('s21lab', { code: MISTAKES[i].code, fix: MISTAKES[i] .fix });
+    if (slide.classList.contains('active')) lab.show();
+  }
+  pick(0);
+})();
+
+/* ---------- slide 23: the homework game (plays here, the code is yours to write) ---------- */
+(function(){
+  const can = $('s23screen'), btn = $('s23run'), GROUND = 250;
+  let timer = 0, st = null, jump = false;
+  const demo = { stop };
+  const hit = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+  function fresh(){ st = { r: { x: 60, y: GROUND - 40, w: 30, h: 40, v: 0 }, obs: [{ x: 600, y: GROUND - 40, w: 20, h: 40, sp: 7, c: 'green' }], t: 0, score: 0, over: false }; }
+  function step(){
+    const s = st;
+    if (s.over) { }
+    else {
+      if (jump && s.r.y === GROUND - s.r.h) s.r.v = -15;
+      s.r.v += 1; s.r.y += s.r.v;
+      if (s.r.y > GROUND - s.r.h) { s.r.y = GROUND - s.r.h; s.r.v = 0; }
+      
+      const keep = [];
+      for (const o of s.obs) { o.x -= o.sp; if (hit(s.r, o)) s.over = true; else if (o.x < -20) { s.score++; o.x = 600; } keep.push(o); }
+      s.obs = keep;
+    }
+    jump = false;
+    const cmds = [['rect', 0, GROUND, 600, 2, 'black'], ['rect', st.r.x, st.r.y, st.r.w, st.r.h, 'blue']];
+    for (const o of st.obs) cmds.push(['rect', o.x, o.y, o.w, o.h, o.c]);
+    cmds.push(['text', 'Score: ' + st.score, 10, 10, 'black', 20]);
+    if (st.over) cmds.push(['text', 'Game over', 250, 100, 'black', 20]);
+    drawCmds(can, cmds);
+  }
+  let down = false;
+  function stop(){ if (timer) { clearInterval(timer); timer = 0; } if (running === demo) running = null; down = false; btn.innerHTML = '&#9654; Play'; btn.classList.add('primary'); btn.classList.remove('stop'); if (document.activeElement === can) can.blur(); }
+  btn.onclick = () => {
+    if (timer) stop();
+    stopRunning(); running = demo; fresh(); timer = setInterval(() => { if (down) jump = true; step(); }, 1000 / 30);
+    can.focus({ preventScroll: true });
+  };
+  can.addEventListener('keydown', e => { if (!timer || keyName(e) !== 'space') return; e.preventDefault(); down = true; jump = true; });
+  can.addEventListener('keyup', e => { if (keyName(e) === 'space') down = false; });
+  can.addEventListener('blur', () => { down = false; });
+  can.addEventListener('pointerdown', e => { if (!timer) return; e.preventDefault(); can.focus({ preventScroll: true }); down = true; jump = true; });
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) can.addEventListener(ev, () => { down = false; });
+  can.closest('.slide').labs = [{ show(){ if (!timer) drawIdle(can, 'Press Play'); }, stop }];
+  drawIdle(can, 'Press Play');
+})();
+
+document.addEventListener('dblclick', e => { if (!e.target.closest('.CodeMirror')) e.preventDefault(); });
+(() => { let last = 0; document.addEventListener('touchend', e => { const now = Date.now(); if (now - last < 320 && !e.target.closest('button,a,.CodeMirror,canvas,svg,input')) e.preventDefault(); last = now; }, { passive: false }); })();
+(() => { const two = document.querySelector('#s11 .two'); if (!two) return; const [a, b] = two.children; const code = a.querySelector('pre.code'); while (b.firstChild) a.appendChild(b.firstChild); b.appendChild(code); })();
+/* ---------- Navigation: bottom buttons (and arrow keys on a keyboard) ---------- */
+const slides = [...document.querySelectorAll('.slide')];
+let cur = 0;
+function show(n){
+  n = Math.max(0, Math.min(slides.length - 1, n));
+  stopRunning();
+  slides[cur].classList.remove('active');
+  cur = n;
+  const s = slides[cur];
+  s.classList.add('active'); s.scrollTop = 0;
+  $('counter').textContent = `${cur + 1} / ${slides.length}`;
+  $('bar').style.width = ((cur + 1) / slides.length * 100) + '%';
+  $('prev').disabled = cur === 0; $('next').disabled = cur === slides.length - 1;
+  history.replaceState(null, '', '#' + (cur + 1));
+  (s.labs || []).forEach(l => l.show && l.show());
+}
+$('prev').onclick = () => show(cur - 1);
+$('next').onclick = () => show(cur + 1);
+document.addEventListener('keydown', e => {
+  const t = e.target;
+  if (t.closest && (t.closest('.CodeMirror') || t.matches('input,textarea,select'))) return;
+  if (running && t.matches && t.matches('canvas')) return;   // the arrow keys belong to the game while it runs
+  if (e.key === 'ArrowRight' || e.key === 'PageDown'){ show(cur + 1); e.preventDefault(); }
+  else if (e.key === 'ArrowLeft' || e.key === 'PageUp'){ show(cur - 1); e.preventDefault(); }
+});
+// stop iOS Safari zooming on a fast double tap
+let lastTouch = 0;
+document.addEventListener('touchend', e => {
+  const now = Date.now();
+  if (now - lastTouch < 350 && !(e.target.closest && e.target.closest('input,textarea,.CodeMirror,canvas,.pad'))){
+    e.preventDefault();
+    const b = e.target.closest && e.target.closest('button');
+    if (b && !b.disabled) b.click();
+  }
+  lastTouch = now;
+}, { passive: false });
+document.addEventListener('gesturestart', e => e.preventDefault());
+show((parseInt(location.hash.slice(1)) || 1) - 1);
+window.addEventListener('load', () => setTimeout(() => loadPy().catch(() => {}), 1500));
+</script>
+</body>
+</html>

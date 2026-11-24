@@ -211,6 +211,24 @@ main {
 }
 .in-field:focus { border-bottom-style: solid; }
 
+/* game screen: shown when a program calls engine.run() */
+#gameWrap { flex: none; padding: 12px 12px 0; }
+#screen {
+  display: block; width: 100%; max-width: 600px; height: auto; aspect-ratio: 2 / 1;
+  background: #fff; border: 1px solid var(--line); border-radius: 6px; outline: none;
+  touch-action: none; -webkit-user-select: none; user-select: none;
+}
+#screen:focus { border-color: var(--accent); }
+#gameHint { font-size: 12px; color: var(--muted); margin-top: 6px; min-height: 17px; }
+#pad { display: none; gap: 8px; margin-top: 8px; max-width: 600px; }
+#pad button {
+  flex: 1; min-height: 46px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel);
+  font-size: 15px; cursor: pointer; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
+#pad button.wide { flex: 2; }
+#pad button.on { background: var(--sel); }
+@media (pointer: coarse) { #pad { display: flex; } #gameHint { display: none; } }
+
 /* debugger */
 #debug { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .dbg-controls {
@@ -348,6 +366,18 @@ table.vars tr.changed td.val { background: var(--hl); }
       <button class="btn small" id="exitDbgBtn" hidden>Exit debugger</button>
     </div>
 
+    <div id="gameWrap" hidden>
+      <canvas id="screen" width="600" height="300" tabindex="0" aria-label="Game screen"></canvas>
+      <div id="pad">
+        <button data-k="left" aria-label="Left"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(180deg)"><path d="M7 4.5v15l12.5-7.5z"/></svg></button>
+        <button data-k="right" aria-label="Right"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z"/></svg></button>
+        <button data-k="up" aria-label="Up"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(-90deg)"><path d="M7 4.5v15l12.5-7.5z"/></svg></button>
+        <button data-k="down" aria-label="Down"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(90deg)"><path d="M7 4.5v15l12.5-7.5z"/></svg></button>
+        <button data-k="space" class="wide">space</button>
+      </div>
+      <div id="gameHint"></div>
+    </div>
+
     <div id="outWrap"><pre class="term" id="output"><span class="note">Press Run to start</span></pre></div>
 
     <div id="debug" hidden>
@@ -380,12 +410,96 @@ table.vars tr.changed td.val { background: var(--hl); }
 <div id="toast" hidden></div>
 <div id="dropHint" hidden>Drop files to add them</div>
 
+<!-- The engine module: programs can "import engine" to draw on the game screen and read the keyboard -->
+<script type="text/x-python" id="engineSrc">
+# engine: a small screen and keyboard for games.
+#
+#   engine.rect(x, y, width, height, color)   draw a rectangle
+#   engine.text(message, x, y)                draw some text
+#   engine.key_down("space")                  True while that key is held down
+#   engine.run(game)                          call game.update() and game.draw() 30 times a second
+#
+# The screen is 600 wide and 300 tall. x goes across from the left edge
+# and y goes down from the top edge.
+
+WIDTH = 600
+HEIGHT = 300
+
+_game = None
+_keys = set()
+_commands = []
+_KEYS = ("left", "right", "up", "down", "space", "enter")
+
+
+def _number(value, name, func):
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise TypeError("engine." + func + "() needs a number for " + name + ", but it got " + repr(value))
+    if value != value or value in (float("inf"), float("-inf")):
+        raise ValueError("engine." + func + "() got " + repr(value) + " for " + name)
+    return value
+
+
+def rect(x, y, width, height, color="black"):
+    """Draw a rectangle. x and y are its top left corner."""
+    if not isinstance(color, str):
+        raise TypeError("engine.rect() needs a color name in quotes, like \"red\", but it got " + repr(color))
+    _commands.append(["rect", _number(x, "x", "rect"), _number(y, "y", "rect"),
+                      _number(width, "width", "rect"), _number(height, "height", "rect"), color])
+
+
+def text(message, x, y, color="black", size=20):
+    """Draw text. x and y are the top left corner of the text."""
+    if not isinstance(color, str):
+        raise TypeError("engine.text() needs a color name in quotes, like \"red\", but it got " + repr(color))
+    _commands.append(["text", str(message), _number(x, "x", "text"), _number(y, "y", "text"),
+                      color, _number(size, "size", "text")])
+
+
+def key_down(key):
+    """True while the key is held down. Keys: "left" "right" "up" "down" "space" "enter", or a letter or digit."""
+    if not isinstance(key, str):
+        raise TypeError("engine.key_down() needs a key name in quotes, like \"space\", but it got " + repr(key))
+    k = key.lower()
+    if k == " ":
+        k = "space"
+    if k not in _KEYS and not (len(k) == 1 and k.isalnum()):
+        raise ValueError("engine.key_down() doesn't know the key " + repr(key) +
+                         ". Use \"left\", \"right\", \"up\", \"down\", \"space\", \"enter\", or one letter or digit.")
+    return k in _keys
+
+
+def run(game):
+    """Start the game. Put this on the last line of your program."""
+    global _game
+    if isinstance(game, type):
+        raise TypeError("engine.run() needs an object, not a class. Write engine.run(" +
+                        game.__name__ + "()) with parentheses after the class name.")
+    for name in ("update", "draw"):
+        if not callable(getattr(game, name, None)):
+            raise TypeError("engine.run() needs an object that has an update() method and a draw() method. " +
+                            "This " + type(game).__name__ + " object has no " + name + "() method.")
+    _game = game
+
+
+def _frame(keys):
+    # The compiler calls this 30 times a second.
+    global _commands
+    _keys.clear()
+    _keys.update(keys)
+    _commands = []
+    _game.update()
+    _game.draw()
+    return _commands
+</script>
+
 <!-- Python helpers that run inside the worker -->
 <script type="text/x-python" id="pySrc">
 import sys, io, os, json, types, traceback, builtins, random, importlib
 
 ROOT = '/project'
 os.makedirs(ROOT, exist_ok=True)
+LIB = '/pylib'   # modules that come with the compiler (engine)
+if LIB not in sys.path: sys.path.append(LIB)
 sys.dont_write_bytecode = True
 
 def _isuser(fn): return isinstance(fn, str) and fn.startswith(ROOT + '/')
@@ -459,6 +573,7 @@ def _begin(entry, inputs, emit, seed):
     for name, mod in list(sys.modules.items()):
         if _isuser(getattr(mod, '__file__', None) or ''):
             del sys.modules[name]
+    sys.modules.pop('engine', None)
     importlib.invalidate_caches()
     sys.argv = [entry]
     sess = _sess = _Session(json.loads(inputs), emit)
@@ -477,7 +592,11 @@ def _exc_info(e):
     tb = e.__traceback__
     while tb is not None and not _isuser(tb.tb_frame.f_code.co_filename):
         tb = tb.tb_next
-    text = ''.join(traceback.format_exception(type(e), e, tb)).replace('File "' + ROOT + '/', 'File "')
+    te = traceback.TracebackException(type(e), e, tb, compact=True)
+    if any(f.filename.startswith(LIB + '/') for f in te.stack):
+        # leave the engine's own lines out, so the last line shown is the user's
+        te.stack = traceback.StackSummary.from_list([f for f in te.stack if not f.filename.startswith(LIB + '/')])
+    text = ''.join(te.format()).replace('File "' + ROOT + '/', 'File "')
     loc = None
     if isinstance(e, SyntaxError) and _isuser(e.filename):
         loc = [_rel(e.filename), e.lineno]
@@ -515,6 +634,34 @@ def _run(entry, inputs, emit, seed):
         _emit_now = None
     if sess.waiting is not None:
         res = {'err': None, 'loc': None, 'need': sess.waiting}
+    return json.dumps(res)
+
+# ---- games: after a program calls engine.run(game), the worker calls _gframe 30 times a second ----
+def _game_on():
+    eng = sys.modules.get('engine')
+    return (eng is not None and (getattr(eng, '__file__', None) or '').startswith(LIB + '/')
+            and getattr(eng, '_game', None) is not None)
+
+def _no_input(*a):
+    raise RuntimeError("input() can't be used while a game is running. Use engine.key_down() to read the keyboard.")
+
+def _gframe(keys, emit):
+    global _emit_now
+    o, e, i = sys.stdout, sys.stderr, builtins.input
+    sys.stdout = _Out(emit, 'out'); sys.stderr = _Out(emit, 'err')
+    _emit_now = emit
+    builtins.input = _no_input
+    res = {'cmds': None, 'err': None, 'loc': None}
+    try:
+        res['cmds'] = sys.modules['engine']._frame(json.loads(keys))
+    except SystemExit as ex:
+        res['err'] = _exit_msg(ex) or ''
+    except BaseException as ex:
+        res['err'], res['loc'] = _exc_info(ex)
+    finally:
+        sys.stdout, sys.stderr = o, e
+        builtins.input = i
+        _emit_now = None
     return json.dumps(res)
 
 def _safe(v):
@@ -571,6 +718,10 @@ def _trace(entry, inputs, seed, limit):
         code, g = _load(entry)
         sys.settrace(glob)
         exec(code, g)
+        if _game_on():
+            # a game: record its first second (30 frames, no keys pressed)
+            builtins.input = _no_input
+            for _ in range(30): sys.modules['engine']._frame([])
     except _NeedInput:
         pass
     except _Limit:
@@ -591,7 +742,32 @@ def _trace(entry, inputs, seed, limit):
 
 <!-- Web worker: loads Pyodide and runs code off the main thread -->
 <script type="text/x-worker" id="workerSrc">
-let py, runFn, traceFn, buf = [], winStart = 0, winCount = 0;
+let py, runFn, traceFn, frameFn, gameOnFn, buf = [], winStart = 0, winCount = 0;
+// A game: after the program ends, if it called engine.run(game), call the game 30 times a second.
+// Keys arrive as messages between frames.
+let game = null; const held = new Set(), tapped = new Set();
+function endGame(res) {
+  const g = game; game = null; clearTimeout(g.timer);
+  flush();
+  let changed = [];
+  try { changed = changedFiles(g.files); } catch (err) {}
+  postMessage({ t: 'done', id: g.id, res, changed });
+}
+function tick() {
+  if (!game) return;
+  const g = game;
+  const keys = [...new Set([...held, ...tapped])]; tapped.clear();
+  let res;
+  try { res = JSON.parse(frameFn(JSON.stringify(keys), emit)); }
+  catch (err) { res = { cmds: null, err: String(err), loc: null }; }
+  flush();
+  if (game !== g) return;
+  if (res.cmds) postMessage({ t: 'frame', id: g.id, cmds: res.cmds });
+  if (res.err != null) { endGame({ err: res.err || null, loc: res.loc, need: null }); return; }
+  const now = performance.now();
+  g.next += 1000 / 30; if (g.next < now - 100) g.next = now;
+  g.timer = setTimeout(tick, Math.max(0, g.next - now));
+}
 const ROOT = '/project';
 // Output is sent to the page right away, but batched when a program prints very fast.
 function flush() { if (buf.length) { postMessage({ t: 'out', chunks: buf }); buf = []; } }
@@ -653,13 +829,19 @@ self.onmessage = async (e) => {
     try {
       importScripts(m.base + 'pyodide.js');
       py = await loadPyodide({ indexURL: m.base });
+      py.FS.mkdirTree('/pylib'); py.FS.writeFile('/pylib/engine.py', m.engine);
       py.runPython(m.py);
       runFn = py.globals.get('_run'); traceFn = py.globals.get('_trace');
+      frameFn = py.globals.get('_gframe'); gameOnFn = py.globals.get('_game_on');
       postMessage({ t: 'ready', version: py.runPython('import sys; sys.version.split()[0]') });
     } catch (err) { postMessage({ t: 'fatal', msg: String(err) }); }
     return;
   }
+  if (m.t === 'key') { if (m.d) { held.add(m.k); tapped.add(m.k); } else held.delete(m.k); return; }
+  if (m.t === 'keysup') { held.clear(); return; }
+  if (m.t === 'stopgame') { if (game) endGame({ err: null, loc: null, need: null, stopped: true }); return; }
   if (m.t === 'run' || m.t === 'trace') {
+    if (game) { clearTimeout(game.timer); game = null; }
     await packages(m.files);
     writeFiles(m.files);
     postMessage({ t: 'started', id: m.id });
@@ -669,6 +851,15 @@ self.onmessage = async (e) => {
       try { res = JSON.parse(runFn(m.entry, JSON.stringify(m.inputs), emit, m.seed)); }
       catch (err) { res = { err: String(err), loc: null, need: null }; }
       flush();
+      let isGame = false;
+      try { isGame = !res.err && res.need == null && !!gameOnFn(); } catch (err) {}
+      if (isGame) {
+        held.clear(); tapped.clear();
+        game = { id: m.id, files: m.files, next: performance.now(), timer: 0 };
+        postMessage({ t: 'game', id: m.id });
+        tick();
+        return;
+      }
       let changed = [];
       try { if (res.need == null) changed = changedFiles(m.files); } catch (err) {}
       postMessage({ t: 'done', id: m.id, res, changed });
@@ -1288,11 +1479,13 @@ function startWorker() {
     else if (m.t === 'status') { if (job) status(m.msg.replace(/[.…\s]+$/, '')); }
     else if (m.t === 'started') { if (job && job.id === m.id) status(job.type === 'run' ? `Running ${job.entry}` : 'Recording steps'); }
     else if (m.t === 'out') { if (job && job.type === 'run') onChunks(m.chunks); }
+    else if (m.t === 'game') { if (job && job.id === m.id && session) startGame(); }
+    else if (m.t === 'frame') { if (job && job.id === m.id && session && session.game) drawFrame(m.cmds); }
     else if (m.t === 'done') { if (job && job.id === m.id) { job = null; onRunDone(m.res, m.changed); } }
     else if (m.t === 'traced') { if (job && job.id === m.id) { job = null; onTraced(m.res); } }
   };
   worker.onerror = e => status('Python error: ' + String(e.message || 'unknown').replace(/\.+$/, ''));
-  worker.postMessage({ t: 'init', base: PYODIDE_BASE, py: $('pySrc').textContent });
+  worker.postMessage({ t: 'init', base: PYODIDE_BASE, py: $('pySrc').textContent, engine: $('engineSrc').textContent.replace(/^\n/, '') });
 }
 function restartWorker() { if (worker) worker.terminate(); job = null; startWorker(); }
 async function send(type, payload) {
@@ -1305,6 +1498,73 @@ function entryFile() {
   if (fileBy('main.py')) return 'main.py';
   const f = files.find(f => f.doc && /\.py$/i.test(f.name));
   return f ? f.name : null;
+}
+
+// ---------------- game screen ----------------
+// A program that calls engine.run(game) keeps running after its last line: the worker calls
+// game.update() and game.draw() 30 times a second and sends back what to draw.
+const gcan = $('screen'), gctx = gcan.getContext('2d');
+const GW = 600, GH = 300;
+const gameOn = () => !!(session && session.game && job);
+const badColors = new Set();
+function sizeScreen() {
+  const r = Math.min(3, Math.max(1, window.devicePixelRatio || 1));
+  if (gcan.width !== Math.round(GW * r)) { gcan.width = Math.round(GW * r); gcan.height = Math.round(GH * r); }
+  gctx.setTransform(gcan.width / GW, 0, 0, gcan.height / GH, 0, 0);
+}
+function setColor(c) {
+  if (!CSS.supports('color', c)) {
+    if (!badColors.has(c) && badColors.size < 20) { badColors.add(c); write(out, `"${c}" is not a color the screen knows, so it used black\n`, 'err'); }
+    c = '#000';
+  }
+  gctx.fillStyle = c;
+}
+function drawFrame(cmds) {
+  sizeScreen();
+  gctx.fillStyle = '#fff'; gctx.fillRect(0, 0, GW, GH);
+  for (const c of cmds) {
+    if (c[0] === 'rect') { setColor(c[5]); gctx.fillRect(c[1], c[2], c[3], c[4]); }
+    else if (c[0] === 'text') {
+      setColor(c[4]);
+      gctx.font = `${c[5]}px "Helvetica Neue", Helvetica, Arial, sans-serif`; gctx.textBaseline = 'top';
+      gctx.fillText(c[1], c[2], c[3]);
+    }
+  }
+}
+function gameHint() {
+  $('gameHint').textContent = !gameOn() ? '' : document.activeElement === gcan ? 'The keyboard controls the game' : 'Click the game to use the keyboard';
+}
+function startGame() {
+  session.game = true;
+  badColors.clear();
+  $('gameWrap').hidden = false;
+  drawFrame([]);
+  gcan.focus({ preventScroll: true });
+  gameHint();
+  noteOutput();
+}
+const KEYMAP = { ' ': 'space', Spacebar: 'space', ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down', Left: 'left', Right: 'right', Up: 'up', Down: 'down', Enter: 'enter' };
+const keyName = e => KEYMAP[e.key] || (e.key && e.key.length === 1 && /[a-z0-9]/i.test(e.key) ? e.key.toLowerCase() : null);
+function sendKey(k, d) { if (gameOn()) worker.postMessage({ t: 'key', k, d }); }
+gcan.addEventListener('keydown', e => {
+  if (!gameOn() || e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = keyName(e); if (!k) return;
+  e.preventDefault();
+  if (!e.repeat) sendKey(k, true);
+});
+gcan.addEventListener('keyup', e => { const k = keyName(e); if (k) sendKey(k, false); });
+gcan.addEventListener('blur', () => { if (gameOn()) worker.postMessage({ t: 'keysup' }); gameHint(); });
+gcan.addEventListener('focus', gameHint);
+// a click or a touch on the screen counts as the space key
+gcan.addEventListener('pointerdown', e => { if (!gameOn()) return; e.preventDefault(); gcan.focus({ preventScroll: true }); sendKey('space', true); });
+for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) gcan.addEventListener(ev, () => sendKey('space', false));
+gcan.addEventListener('contextmenu', e => e.preventDefault());
+// on-screen keys for phones and tablets
+for (const b of $('pad').querySelectorAll('button')) {
+  const up = () => { if (b.classList.contains('on')) { b.classList.remove('on'); sendKey(b.dataset.k, false); } };
+  b.addEventListener('pointerdown', e => { e.preventDefault(); if (!gameOn()) return; b.classList.add('on'); sendKey(b.dataset.k, true); });
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, up);
+  b.addEventListener('contextmenu', e => e.preventDefault());
 }
 
 // ---------------- Run ----------------
@@ -1323,6 +1583,7 @@ function run() {
   if (session || job) { stop(); return; }
   exitDebug(); clearErrMark();
   out.textContent = '';
+  $('gameWrap').hidden = true;
   const entry = entryFile();
   if (!entry) { write(out, 'No .py file to run', 'note'); return; }
   session = { entry, files: snapshot(), inputs: [], seed: (Math.random() * 2 ** 31) | 0, shown: 0, recv: 0, t0: 0 };
@@ -1344,11 +1605,14 @@ function onChunks(chunks) {
     write(out, start < session.shown ? text.slice(session.shown - start) : text, kind === 'in' ? 'in' : kind === 'err' ? 'err' : 'out');
     session.shown = session.recv;
   }
+  // a game that prints every frame would fill the page, so only the newest part is kept
+  if (session.game && out.textContent.length > 60000) { const keep = out.textContent.slice(-30000); out.textContent = ''; write(out, keep.slice(keep.indexOf('\n') + 1), 'out'); }
   noteOutput();
   scrollDown($('outWrap'));
 }
 function onRunDone(res, changed) {
   if (!session) return;
+  clearTimeout(session.killT);
   if (res.need != null) {
     noteOutput();
     setMode('waiting');
@@ -1364,9 +1628,12 @@ function onRunDone(res, changed) {
   }
   const ms = Math.round(performance.now() - session.t0);
   if (res.err) { write(out, (out.textContent && !out.textContent.endsWith('\n') ? '\n' : '') + res.err, 'err'); markErr(res.loc); }
+  const wasGame = !!session.game;
+  if (res.stopped) write(out, (out.textContent.endsWith('\n') || !out.textContent ? '' : '\n') + 'Stopped', 'note');
   if (!out.textContent) write(out, 'No output', 'note');
-  status((res.err ? 'Error' : 'Done') + ` in ${ms} ms`);
+  status(wasGame ? (res.err ? 'Error' : 'Stopped') : (res.err ? 'Error' : 'Done') + ` in ${ms} ms`);
   session = null; setMode('idle');
+  gameHint();
   applyChanges(changed || []);
   scrollDown($('outWrap'));
 }
@@ -1389,10 +1656,19 @@ function applyChanges(changed) {
 }
 function stopQuietly() {
   if (inputField) { inputField.remove(); inputField = null; }
+  if (session) clearTimeout(session.killT);
   if (job) restartWorker();
   session = null; setMode('idle');
+  gameHint();
 }
 function stop() {
+  // a running game is asked to stop; if it doesn't answer (stuck in a loop), Python is restarted
+  if (gameOn() && !session.stopping) {
+    session.stopping = true;
+    worker.postMessage({ t: 'stopgame' });
+    session.killT = setTimeout(() => { if (session && session.stopping) stop(); }, 700);
+    return;
+  }
   const wasBusy = !!job;
   const hadSession = !!session;
   stopQuietly();
@@ -1420,6 +1696,7 @@ function startDebug() {
   if (job) return;
   if (session) stop();
   exitDebug(); clearErrMark();
+  $('gameWrap').hidden = true;
   const entry = entryFile();
   if (!entry) { toast('No .py file to debug'); return; }
   dbg = { entry, files: snapshot(), inputs: [], seed: (Math.random() * 2 ** 31) | 0, trace: null, idx: 0, resume: null };
